@@ -5,6 +5,7 @@ import 'package:vac/screens/landing/introduction.dart';
 import 'package:vac/screens/schedule/schedule.dart';
 import 'package:vac/screens/store/store.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 // Import Firebase Core
 import 'package:firebase_core/firebase_core.dart';
@@ -45,6 +46,18 @@ class MyApp extends StatelessWidget {
           colorScheme:
               ColorScheme.fromSeed(seedColor: Color.fromRGBO(123, 2, 193, 1)),
         ),
+
+        // --- Localization Configuration ---
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('es', 'ES'),
+        ],
+        locale: const Locale('es', 'ES'),
+
         home: Introduction(),
       ),
     );
@@ -54,12 +67,23 @@ class MyApp extends StatelessWidget {
 class MyAppState extends ChangeNotifier {}
 
 class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key});
+
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
   var selectedIndex = 1;
+
+  void _navigateToPage(int index) {
+    if (index >= 0 && index <= 2) {
+      // Basic bounds check
+      setState(() {
+        selectedIndex = index;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,12 +92,18 @@ class _MyHomePageState extends State<MyHomePage> {
       case 0:
         page = Store();
       case 1:
-        page = Home();
+        page = Home(
+          onNavigateToSchedule: () => _navigateToPage(2),
+          onNavigateToStore: () => _navigateToPage(0),
+        );
       case 2:
         page = Schedule();
       default:
-        throw UnimplementedError(
-            'No widget selected for Nav\'s index #$selectedIndex');
+        page = Home(
+          onNavigateToSchedule: () => _navigateToPage(2),
+          onNavigateToStore: () => _navigateToPage(0),
+        );
+        print('Warning: Invalid selectedIndex $selectedIndex');
     }
 
     var mainArea = ColoredBox(
@@ -83,6 +113,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: AnimatedSwitcher(
           duration: Duration(milliseconds: 200),
           child: Container(
+            key: ValueKey<int>(selectedIndex),
             alignment: Alignment.topCenter,
             child: SingleChildScrollView(
               child: SizedBox(width: double.infinity, child: page),
@@ -117,9 +148,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
               currentIndex: selectedIndex,
               onTap: (value) {
-                setState(() {
-                  selectedIndex = value;
-                });
+                _navigateToPage(value);
               },
             ),
           ),

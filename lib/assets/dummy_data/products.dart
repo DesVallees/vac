@@ -409,6 +409,136 @@ class ProductRepository {
         contraindications: null,
         precautions: null,
       ),
+
+      // Paquete Recién Nacido (BCG no está definida, solo Hep B)
+      Package(
+        id: 'pkg_recien_nacido',
+        name: 'Paquete Recién Nacido',
+        commonName: 'Recién Nacido (HepB)',
+        description:
+            'Vacunación recomendada al nacer: incluye la dosis de Hepatitis B (BCG no incluida).',
+        price: 25000.0, // sin descuento o ajusta según corresponda
+        priceAvacunar: null,
+        priceVita: null,
+        priceColsanitas: null,
+        imageUrl: 'lib/assets/images/products/paquete_recien_nacido.png',
+        applicableDoctors: ['Pediatría'],
+        minAge: 0,
+        maxAge: 0,
+        specialIndications:
+            'Aplicar durante las primeras 24 horas de vida. Se sugiere BCG aparte.',
+        includedProductIds: ['v_hepb'],
+        targetMilestone: 'Recién Nacido',
+      ),
+
+      // Paquete 2 Meses (INFANRIX HEXA + PREVENAR 13 + NIMENRIX + Rotarix)
+      Package(
+        id: 'pkg_2_meses',
+        name: 'Paquete 2 Meses',
+        commonName: '2 Meses',
+        description:
+            'Incluye vacunas recomendadas a los 2 meses: Hexavalente (DTP, Polio, Hib, Hep B), Neumococo, Meningococo y Rotavirus.',
+        // Suma = 130k + 140k + 150k + 90k = 510k
+        // Aplicamos 10% descuento => 459000
+        price: 459000.0,
+        priceAvacunar: null,
+        priceVita: null,
+        priceColsanitas: null,
+        imageUrl: 'lib/assets/images/products/paquete_2meses.png',
+        applicableDoctors: ['Pediatría'],
+        minAge: 2,
+        maxAge: 2,
+        specialIndications:
+            'Aplicar a partir de la 8a semana de vida según protocolo nacional.',
+        includedProductIds: ['1', '2', '3', '9'],
+        targetMilestone: '2 Meses',
+      ),
+
+      // Paquete 4 Meses (mismas vacunas que a los 2 meses, segunda dosis)
+      Package(
+        id: 'pkg_4_meses',
+        name: 'Paquete 4 Meses',
+        commonName: '4 Meses',
+        description:
+            'Incluye vacunas recomendadas a los 4 meses: segunda dosis de Hexavalente, Neumococo, Meningococo y Rotavirus.',
+        // Mismo costo que el de 2 meses => 459000
+        price: 459000.0,
+        priceAvacunar: null,
+        priceVita: null,
+        priceColsanitas: null,
+        imageUrl: 'lib/assets/images/products/paquete_4meses.png',
+        applicableDoctors: ['Pediatría'],
+        minAge: 4,
+        maxAge: 4,
+        specialIndications: 'Segunda dosis de cada vacuna según protocolo.',
+        includedProductIds: ['1', '2', '3', '9'],
+        targetMilestone: '4 Meses',
+      ),
+
+      // Paquete 6 Meses (tercera de Hexavalente, Neumococo, Meningococo + Influenza)
+      Package(
+        id: 'pkg_6_meses',
+        name: 'Paquete 6 Meses',
+        commonName: '6 Meses',
+        description:
+            'Incluye vacunas recomendadas a los 6 meses: tercera dosis de Hexavalente, Neumococo, Meningococo y primera dosis de Influenza.',
+        // Suma = 130k + 140k + 150k + 160k = 580k
+        // 10% descuento => 522000
+        price: 522000.0,
+        priceAvacunar: null,
+        priceVita: null,
+        priceColsanitas: null,
+        imageUrl: 'lib/assets/images/products/paquete_6meses.png',
+        applicableDoctors: ['Pediatría'],
+        minAge: 6,
+        maxAge: 6,
+        specialIndications:
+            'Incluye la primera dosis de influenza a partir de los 6 meses.',
+        includedProductIds: ['1', '2', '3', '4'],
+        targetMilestone: '6 Meses',
+      ),
+
+      // Paquete 7 Meses (segunda dosis de Influenza)
+      Package(
+        id: 'pkg_7_meses',
+        name: 'Paquete 7 Meses',
+        commonName: '7 Meses',
+        description:
+            'Incluye la segunda dosis de Influenza estacional recomendada alrededor de los 7 meses.',
+        price: 160000.0, // o aplica descuento si quieres
+        priceAvacunar: null,
+        priceVita: null,
+        priceColsanitas: null,
+        imageUrl: 'lib/assets/images/products/paquete_7meses.png',
+        applicableDoctors: ['Pediatría', 'Medicina General'],
+        minAge: 7,
+        maxAge: 7,
+        specialIndications:
+            'La segunda dosis de Influenza se recomienda 4 semanas después de la primera.',
+        includedProductIds: ['4'],
+        targetMilestone: '7 Meses',
+      ),
+
+      // Paquete 12 Meses (SRP - triple viral)
+      Package(
+        id: 'pkg_12_meses',
+        name: 'Paquete 12 Meses',
+        commonName: '12 Meses',
+        description:
+            'Incluye la primera dosis de la vacuna triple viral (SRP: Sarampión, Rubéola, Paperas).',
+        price: 120000.0, // o ajusta si deseas descuento
+        priceAvacunar: null,
+        priceVita: null,
+        priceColsanitas: null,
+        imageUrl: 'lib/assets/images/products/paquete_12meses.png',
+        applicableDoctors: ['Pediatría'],
+        minAge: 12,
+        maxAge: 12,
+        specialIndications:
+            'Iniciar la protección contra Sarampión, Rubéola y Paperas.',
+        includedProductIds: ['5'],
+        targetMilestone: '12 Meses',
+      ),
     ];
   }
 }

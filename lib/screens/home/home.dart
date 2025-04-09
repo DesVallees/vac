@@ -1,84 +1,174 @@
 import 'package:flutter/material.dart';
-import 'package:vac/assets/components/product_card.dart';
+import 'package:vac/assets/components/appointment_card.dart'; // Import AppointmentCard
+import 'package:vac/assets/components/detailed_product_card.dart'; // Import DetailedProductCard
+import 'package:vac/assets/components/search_and_filter_bar.dart'; // Import reusable SearchAndFilterBar
+import 'package:vac/assets/data_classes/appointment.dart'; // Import Appointment class
+import 'package:vac/assets/data_classes/product.dart'; // Import Product class
+import 'package:vac/assets/dummy_data/appointments.dart'; // Import dummy appointments
+import 'package:vac/assets/dummy_data/products.dart'; // Import dummy products
 
 class Home extends StatelessWidget {
+  // Callback function to navigate to the schedule page
+  final VoidCallback onNavigateToSchedule;
+  // Callback function to navigate to the store page
+  final VoidCallback onNavigateToStore;
+
+  const Home(
+      {super.key,
+      required this.onNavigateToSchedule,
+      required this.onNavigateToStore}); // Add constructor
+
   @override
   Widget build(BuildContext context) {
+    // --- Data Fetching and Processing ---
+    // Get Products (Example: Fetch first 2 packages for display)
+    final ProductRepository productRepository = ProductRepository();
+    final List<Product> allProducts = productRepository.getProducts();
+    final List<Product> featuredPackages = allProducts
+        .whereType<Package>() // Filter only packages
+        .take(2) // Take the first 2 found
+        .toList();
+
+    // Get Appointments (Fetch, filter upcoming, sort, take top 3)
+    final AppointmentRepository appointmentRepository = AppointmentRepository();
+    final List<Appointment> allAppointments =
+        appointmentRepository.getAppointments();
+    final List<Appointment> nextThreeAppointments = allAppointments
+        .where((appt) => appt.isUpcoming) // Filter for upcoming
+        .toList()
+      ..sort((a, b) => a.dateTime.compareTo(b.dateTime)) // Sort by date
+      ..take(3); // Take the first 3
+
+    // --- Build Method ---
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 30),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Header(),
+          const Header(), // Keep Header
           const SizedBox(height: 30),
 
-          SearchBar(),
+          // Use the reusable SearchAndFilterBar (provide dummy handlers for now)
+          SearchAndFilterBar(
+            onSearchChanged: (value) {
+              // TODO: Implement search logic for home screen
+              print('Home Search: $value');
+            },
+            onFiltersChanged: (filters) {
+              // Filters likely not needed on home, but required by widget
+              print('Home Filters: $filters');
+            },
+            availableFilters: const [], // No filters defined for home screen
+          ),
           const SizedBox(height: 30),
 
-          // Services
+          // Services (Keep as is)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildServiceIcon(Icons.person, Colors.blue),
-              _buildServiceIcon(Icons.local_hospital, Colors.orange),
-              _buildServiceIcon(Icons.fact_check, Colors.teal),
-              _buildServiceIcon(Icons.settings, Colors.red),
+              _buildServiceIcon(
+                  Icons.person_add_alt_1, Colors.blue), // User/Patient related
+              _buildServiceIcon(
+                  Icons.medical_services, Colors.orange), // Services/Vaccines
+              _buildServiceIcon(
+                  Icons.fact_check, Colors.teal), // Checkups/Results
+              _buildServiceIcon(Icons.location_on, Colors.red), // Locations
             ],
           ),
           const SizedBox(height: 20),
 
-          // Banner
+          // Banner (Keep as is)
           _buildPromotionalBanner(),
           const SizedBox(height: 40),
 
-          // Featured Products
+          // Featured Products/Packages
           const Text(
-            'Paquetes más vendidos',
+            'Paquetes Destacados', // Changed title
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 10),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              ProductCard(
-                imageUrl: 'lib/assets/images/medical_kit.png',
-                productName: 'Kit Médico',
-                productDescription: 'Comprensivo para uso doméstico.',
-                productPrice: 49.99,
-                backgroundColor: Color.fromARGB(255, 0, 233, 58),
+          const SizedBox(height: 15),
+          if (featuredPackages.isEmpty)
+            const Text('No hay paquetes destacados disponibles.')
+          else
+            GridView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.6, // Adjust as needed for your card layout
+                crossAxisSpacing: 15,
+                mainAxisSpacing: 15,
               ),
-              const SizedBox(height: 10),
-              ProductCard(
-                imageUrl: 'lib/assets/images/vaccine.png',
-                productName: 'Vacuna X',
-                productDescription: 'Vacuna indispensable para X.',
-                productPrice: 29.99,
-                backgroundColor: const Color.fromARGB(255, 34, 0, 255),
-              )
-            ],
-          ),
-          const SizedBox(height: 40),
+              itemCount: featuredPackages.length,
+              itemBuilder: (context, index) {
+                // Use the filtered list
+                return DetailedProductCard(product: featuredPackages[index]);
+              },
+            ),
+          const SizedBox(height: 10), // Spacing before button
 
-          // Appointments
+          // Button to navigate to Store screen
+          Center(
+            // Center the button
+            child: TextButton(
+              onPressed: onNavigateToStore, // Use the passed callback
+              child: const Text(
+                'Ver Más Productos',
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+          ),
+          const SizedBox(height: 30),
+
+          // --- Appointments Section (Rewritten) ---
           const Text(
             'Próximas Citas',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 10),
-          _buildAppointmentCard(
-              '12', 'Mar', '9:30 AM', 'Dr. Freddy', 'Vacuna X', Colors.teal),
-          const SizedBox(height: 20),
-          _buildAppointmentCard('13', 'Mie', '2:00 PM', 'Dra. Constanza',
-              'Vacuna Y', Colors.orange),
-          const SizedBox(height: 20),
-          _buildAppointmentCard(
-              '14', 'Jue', '12:30 PM', 'Dra. Martha', 'Vacuna Z', Colors.red),
-          const SizedBox(height: 40),
+          const SizedBox(height: 15), // Adjusted spacing
+
+          if (nextThreeAppointments.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10.0),
+              child: Text('No tienes citas programadas próximamente.'),
+            )
+          else
+            // Display the next 1-3 appointments using AppointmentCard
+            ListView.separated(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: nextThreeAppointments.length,
+              itemBuilder: (context, index) {
+                return AppointmentCard(
+                    appointment: nextThreeAppointments[index]);
+              },
+              separatorBuilder: (context, index) => const SizedBox(height: 15),
+            ),
+
+          const SizedBox(height: 20), // Spacing before button
+
+          // Button to navigate to Schedule screen
+          Center(
+            // Center the button
+            child: TextButton(
+              onPressed: onNavigateToSchedule, // Use the passed callback
+              child: const Text(
+                'Ver Todas las Citas',
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+          ),
+          // --- End Appointments Section ---
+
+          const SizedBox(height: 40), // Bottom padding
         ],
       ),
     );
   }
 
+  // Keep helper methods _buildServiceIcon and _buildPromotionalBanner
   Widget _buildServiceIcon(IconData icon, Color color) {
     return Container(
       height: 60,
@@ -99,7 +189,8 @@ class Home extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        boxShadow: [
+        boxShadow: const [
+          // Use const
           BoxShadow(
             color: Color.fromARGB(102, 0, 0, 0),
             blurRadius: 9,
@@ -107,7 +198,8 @@ class Home extends StatelessWidget {
           )
         ],
         borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
+          // Use const
           colors: [Colors.blueAccent, Colors.lightBlueAccent],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -143,83 +235,14 @@ class Home extends StatelessWidget {
     );
   }
 
-  Widget _buildAppointmentCard(String day, String weekday, String time,
-      String doctor, String type, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  day,
-                  style: TextStyle(fontSize: 22, color: Colors.white),
-                ),
-                Text(
-                  weekday,
-                  style: TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 15),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                time,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                doctor,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 5),
-              Text(type),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  // REMOVE the old _buildAppointmentCard method from here
+  // Widget _buildAppointmentCard(...) { ... } // DELETE THIS
 }
 
-class SearchBar extends StatelessWidget {
-  const SearchBar({
-    super.key,
-  });
+// REMOVE the local SearchBar class definition from here
+// class SearchBar extends StatelessWidget { ... } // DELETE THIS
 
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      decoration: InputDecoration(
-        prefixIcon: Icon(Icons.search),
-        hintText: 'Buscar...',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide.none,
-        ),
-        filled: true,
-        fillColor: Colors.grey[300],
-        suffixIcon: Icon(Icons.tune),
-      ),
-    );
-  }
-}
-
+// Keep the Header class (or move it to components if preferred)
 class Header extends StatelessWidget {
   const Header({
     super.key,
@@ -227,6 +250,7 @@ class Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // TODO: Replace 'usuario!' with actual user name from state/auth
     return Row(
       children: [
         const Text(
@@ -235,11 +259,12 @@ class Header extends StatelessWidget {
         ),
         const SizedBox(width: 5),
         const Text(
-          'X!',
+          'usuario!',
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
-        Spacer(),
-        CircleAvatar(
+        const Spacer(), // Use const
+        const CircleAvatar(
+          // Use const if image is static asset
           radius: 25,
           backgroundImage: AssetImage('lib/assets/images/home_banner.webp'),
         ),

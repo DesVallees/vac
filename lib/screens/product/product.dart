@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:vac/assets/data_classes/product.dart'; // Ensure this imports the updated file with subclasses
+import 'package:vac/assets/data_classes/product.dart';
+import 'package:vac/screens/new_appointment/new_appointment.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
@@ -80,20 +81,14 @@ class ProductDetailPage extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // Add to Cart / Schedule Button (Consider changing text based on type)
                   ElevatedButton(
                     onPressed: () {
-                      // TODO: Implement add to cart / schedule functionality
-                      // Logic might differ based on product type
-                      String message = 'Añadido al carrito';
-                      if (product is Consultation) {
-                        message = 'Proceder a agendar consulta';
-                      } else if (product is Package) {
-                        message = 'Paquete añadido al carrito';
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(message),
+                      // Navigate to the ScheduleAppointmentScreen, passing the product
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              ScheduleAppointmentScreen(product: product),
                         ),
                       );
                     },
@@ -109,10 +104,7 @@ class ProductDetailPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    // Change button text based on type?
-                    child: Text(product is Consultation
-                        ? 'Agendar Consulta'
-                        : 'Añadir al Carrito'),
+                    child: const Text('Agendar Cita'),
                   ),
 
                   const SizedBox(height: 50),
