@@ -17,92 +17,130 @@ class Introduction extends StatefulWidget {
 class _IntroductionState extends State<Introduction> {
   PageController _controller = PageController();
   bool isLastPage = false;
+  Color _backgroundColor =
+      const Color.fromRGBO(240, 248, 255, 1.0); // Initial background color
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      // Update background color when page changes
+      if (_controller.page != null) {
+        int currentPage = _controller.page!.round();
+        setState(() {
+          _backgroundColor = _getBackgroundColor(currentPage);
+        });
+      }
+    });
+  }
+
+  Color _getBackgroundColor(int index) {
+    switch (index) {
+      case 0:
+        return const Color.fromRGBO(240, 248, 255, 1.0);
+      case 1:
+        return const Color.fromRGBO(255, 239, 213, 1.0);
+      case 2:
+        return const Color.fromRGBO(245, 245, 220, 1.0);
+      case 3:
+        return const Color.fromRGBO(240, 255, 240, 1.0);
+      case 4:
+        return const Color.fromRGBO(255, 250, 240, 1.0);
+      default:
+        return const Color.fromRGBO(240, 248, 255, 1.0); // Default color
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Stack(
-        children: [
-          PageView(
-            controller: _controller,
-            onPageChanged: (value) {
-              setState(() {
-                isLastPage = value == 4;
-              });
-            },
-            children: [
-              One(),
-              Two(),
-              Three(),
-              Four(),
-              Five(),
-            ],
-          ),
-
-          // Dot indicators
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 30),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Scaffold(
+      backgroundColor: _backgroundColor, // Set the background color here
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 30),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Image.asset(
+                      'lib/assets/images/logo.png',
+                      width: 50,
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        goToHome(context);
+                      },
+                      child: Text('Omitir',
+                          style: TextStyle(
+                            color: Color.fromARGB(153, 71, 0, 150),
+                          )),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: PageView(
+                    controller: _controller,
+                    onPageChanged: (value) {
+                      setState(() {
+                        isLastPage = value == 4;
+                        _backgroundColor = _getBackgroundColor(value);
+                      });
+                    },
                     children: [
-                      Image.asset(
-                        'lib/assets/images/logo.png',
-                        width: 50,
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          goToHome(context);
-                        },
-                        child: Text('Omitir',
-                            style: TextStyle(
-                              color: Color.fromARGB(153, 71, 0, 148),
-                            )), // Color más suave
-                      ),
+                      One(),
+                      Two(),
+                      Three(),
+                      Four(),
+                      Five(),
                     ],
                   ),
-                  Spacer(),
-                  SmoothPageIndicator(controller: _controller, count: 5),
-                  SizedBox(
-                    height: 20,
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (isLastPage) {
-                        goToHome(context);
-                      } else {
-                        _controller.nextPage(
-                          duration: Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: Size(
-                          double.infinity, 60), // Ancho máximo y altura fija
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(8), // Menos redondeado
-                      ),
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
+                ),
+                SmoothPageIndicator(controller: _controller, count: 5),
+                SizedBox(
+                  height: 20,
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (isLastPage) {
+                      goToHome(context);
+                    } else {
+                      _controller.nextPage(
+                        duration: Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    minimumSize:
+                        Size(double.infinity, 60), // Ancho máximo y altura fija
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(8), // Menos redondeado
                     ),
-                    child: Text(isLastPage ? 'Hecho' : 'Siguiente',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        )),
-                  )
-                ],
-              ),
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                  ),
+                  child: Text(isLastPage ? 'Hecho' : 'Siguiente',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      )),
+                )
+              ],
             ),
-          )
-        ],
+          ),
+        ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }
 
@@ -112,7 +150,6 @@ class One extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const IntroductionScreen(
-      backgroundColor: Color.fromRGBO(240, 248, 255, 1.0),
       title: 'VAC+',
       imagePath: 'lib/assets/images/home_banner.png',
       subtitle: 'La Mejor Asistencia Médica',
@@ -127,7 +164,6 @@ class Two extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const IntroductionScreen(
-      backgroundColor: Color.fromRGBO(255, 239, 213, 1.0),
       title: 'Gestión de Vacunas',
       imagePath: 'lib/assets/images/vacunas.png',
       subtitle: 'Nunca Pierdas una Dosis',
@@ -143,7 +179,6 @@ class Three extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const IntroductionScreen(
-      backgroundColor: Color.fromRGBO(245, 245, 220, 1.0),
       title: 'Registros Médicos',
       imagePath: 'lib/assets/images/historial_medico.png',
       subtitle: 'Toda tu Historia Médica en un Solo Lugar',
@@ -159,7 +194,6 @@ class Four extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const IntroductionScreen(
-      backgroundColor: Color.fromRGBO(240, 255, 240, 1.0),
       title: 'Soporte al Instante',
       imagePath: 'lib/assets/images/servicio_al_cliente.png',
       subtitle: 'Siempre Aquí para Ayudarte',
@@ -175,7 +209,6 @@ class Five extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const IntroductionScreen(
-      backgroundColor: Color.fromRGBO(255, 250, 240, 1.0),
       title: 'Métodos de Pago Seguros',
       imagePath: 'lib/assets/images/pagos_seguros.png',
       subtitle: 'Fácil y Rápido',

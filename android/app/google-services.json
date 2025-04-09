@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "117688840631",
+    "project_id": "vac-plus",
+    "storage_bucket": "vac-plus.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:117688840631:android:c0065812a481b8acf9f832",
+        "android_client_info": {
+          "package_name": "com.example.vac"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJJkimi5j3p6GHXL06IIGN6qcgzxye4pI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

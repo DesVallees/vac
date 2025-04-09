@@ -5,7 +5,23 @@ import 'package:vac/screens/landing/introduction.dart';
 import 'package:vac/screens/schedule/schedule.dart';
 import 'package:vac/screens/store/store.dart';
 
-void main() {
+// Import Firebase Core
+import 'package:firebase_core/firebase_core.dart';
+// Import the generated options file
+import 'firebase_options.dart';
+
+// Make main async
+void main() async {
+  // Ensure Flutter bindings are initialized
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options:
+        DefaultFirebaseOptions.currentPlatform, // Use the generated options
+  );
+
+  // Run app
   runApp(MyApp());
 }
 
