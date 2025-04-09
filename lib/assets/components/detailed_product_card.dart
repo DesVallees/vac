@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vac/assets/dbTypes/product_model.dart';
+import 'package:vac/assets/dbTypes/product_class.dart';
 import 'package:vac/screens/product/product.dart';
 
 class DetailedProductCard extends StatelessWidget {

@@ -1,10 +1,110 @@
-import '../dbTypes/product_model.dart';
+import '../dbTypes/product_class.dart';
 
 class ProductRepository {
   List<Product> getProducts() {
     return [
+      // Difteria - Tétanos - Tos ferina (DTP)
+      Vaccine(
+        id: 'v_dtp',
+        name: 'DTP',
+        commonName: 'Difteria - Tétanos - Tos ferina',
+        description:
+            'Protección combinada contra Difteria, Tétanos y Tos ferina.',
+        price: 40000.0,
+        priceAvacunar: null,
+        priceVita: null,
+        priceColsanitas: null,
+        imageUrl: 'lib/assets/images/products/dtp.png',
+        category: ProductCategory.vaccine,
+        applicableDoctors: ['Pediatría'],
+        minAge: 2,
+        maxAge: 6,
+        manufacturer: 'GENÉRICO',
+        dosageInfo: '3 dosis: 2, 4 y 6 meses',
+        expiryDate: DateTime(2026, 12, 31),
+        storageInstructions: 'Mantener refrigerado entre 2-8°C',
+        targetDiseases: 'Difteria, Tétanos y Tos ferina',
+        dosesAndBoosters: '3 dosis',
+        specialIndications: null,
+        contraindications: null,
+        precautions: null,
+      ),
+
+      // Haemophilus Influenzae tipo b (Hib)
+      Vaccine(
+        id: 'v_hib',
+        name: 'Hib',
+        commonName: 'Haemophilus influenzae tipo b',
+        description:
+            'Protección contra enfermedades causadas por Haemophilus influenzae tipo b.',
+        price: 30000.0,
+        priceAvacunar: null,
+        priceVita: null,
+        priceColsanitas: null,
+        imageUrl: 'lib/assets/images/products/hib.png',
+        category: ProductCategory.vaccine,
+        applicableDoctors: ['Pediatría'],
+        minAge: 2,
+        maxAge: 6,
+        manufacturer: 'GENÉRICO',
+        dosageInfo: '3 dosis: 2, 4 y 6 meses',
+        expiryDate: DateTime(2026, 12, 31),
+        storageInstructions: 'Mantener refrigerado entre 2-8°C',
+        targetDiseases: 'Meningitis, neumonía y otras por Hib',
+        dosesAndBoosters: '3 dosis',
+        specialIndications: null,
+        contraindications: null,
+        precautions: null,
+      ),
+
+      // Hepatitis B
+      Vaccine(
+        id: 'v_hepb',
+        name: 'Hepatitis B',
+        commonName: 'Hepatitis B',
+        description: 'Protección contra el virus de la Hepatitis B.',
+        price: 25000.0,
+        priceAvacunar: null,
+        priceVita: null,
+        priceColsanitas: null,
+        imageUrl: 'lib/assets/images/products/hepatitis_b.png',
+        category: ProductCategory.vaccine,
+        applicableDoctors: ['Pediatría'],
+        minAge: 0,
+        maxAge: 12,
+        manufacturer: 'GENÉRICO',
+        dosageInfo: '3 dosis: nacimiento, 2 y 6 meses',
+        expiryDate: DateTime(2026, 12, 31),
+        storageInstructions: 'Mantener refrigerado entre 2-8°C',
+        targetDiseases: 'Hepatitis B',
+        dosesAndBoosters: '3 dosis',
+        specialIndications: null,
+        contraindications: null,
+        precautions: null,
+      ),
+
+      // Pentavalente Package (DTP + Hib + Hepatitis B)
+      Package(
+        id: 'pkg_pentavalente',
+        name: 'Vacuna Pentavalente',
+        commonName: 'Pentavalente (DTP + Hib + Hepatitis B)',
+        description:
+            'Vacuna combinada para proteger contra Difteria, Tétanos, Tosferina, Hepatitis B y Haemophilus influenzae tipo b.',
+        price: (40000.0 + 30000.0 + 25000.0) * 0.9, // 10% discount
+        priceAvacunar: null,
+        priceVita: null,
+        priceColsanitas: null,
+        imageUrl: 'lib/assets/images/products/pentavalente.png',
+        applicableDoctors: ['Pediatría'],
+        minAge: 2,
+        maxAge: 6,
+        specialIndications:
+            'Este paquete aplica únicamente a menores entre 2 y 6 meses.',
+        includedProductIds: ['v_dtp', 'v_hib', 'v_hepb'],
+        targetMilestone: '2, 4 y 6 meses',
+      ),
       // INFANRIX HEXA
-      Product(
+      Vaccine(
         id: '1',
         name: 'INFANRIX HEXA',
         commonName: 'VACUNA HEXAVALENTE',
@@ -30,7 +130,7 @@ class ProductRepository {
         precautions: null,
       ),
       // PREVENAR 13
-      Product(
+      Vaccine(
         id: '2',
         name: 'PREVENAR 13',
         commonName: 'CONJUGADA CONTRA NEUMOCOCO 13 SEROTIPOS',
@@ -55,7 +155,7 @@ class ProductRepository {
         precautions: null,
       ),
       // NIMENRIX
-      Product(
+      Vaccine(
         id: '3',
         name: 'NIMENRIX',
         commonName: 'VACUNA ANTIMENINGOCOCCICA TETRACONJUGADA',
@@ -80,7 +180,7 @@ class ProductRepository {
         precautions: null,
       ),
       // INFLUVAC TETRA
-      Product(
+      Vaccine(
         id: '4',
         name: 'INFLUVAC TETRA',
         commonName: 'VACUNA CUADRIVALENTE CONTRA INFLUENZA',
@@ -106,7 +206,7 @@ class ProductRepository {
         precautions: null,
       ),
       // PRIORIX
-      Product(
+      Vaccine(
         id: '5',
         name: 'PRIORIX',
         commonName: 'VACUNA TRIPLE VIRAL',
@@ -131,7 +231,7 @@ class ProductRepository {
         precautions: null,
       ),
       // BOOSTRIX
-      Product(
+      Vaccine(
         id: '6',
         name: 'BOOSTRIX (Difteria, Tosferina, Tetános -acelular)',
         commonName: 'BOOSTRIX',
@@ -157,7 +257,7 @@ class ProductRepository {
         precautions: null,
       ),
       // FLUARIX
-      Product(
+      Vaccine(
         id: '7',
         name: 'FLUARIX',
         commonName: 'FLUARIX',
@@ -182,7 +282,7 @@ class ProductRepository {
         precautions: null,
       ),
       // HAVRIX 720
-      Product(
+      Vaccine(
         id: '8',
         name: 'HAVRIX 720 (Hepatitis A Niños)',
         commonName: 'HAVRIX 720',
@@ -207,7 +307,7 @@ class ProductRepository {
         precautions: null,
       ),
       // Rotarix
-      Product(
+      Vaccine(
         id: '9',
         name: 'Rotarix',
         commonName: 'Rotarix',
@@ -234,7 +334,7 @@ class ProductRepository {
         precautions: null,
       ),
       // Menveo y Bexsero
-      Product(
+      Vaccine(
         id: '10',
         name: 'Menveo y Bexsero',
         commonName: 'Menveo y Bexsero',
@@ -259,7 +359,7 @@ class ProductRepository {
         precautions: null,
       ),
       // TETRAXIM
-      Product(
+      Vaccine(
         id: '11',
         name: 'TETRAXIM',
         commonName: 'TETRAXIM',
@@ -285,7 +385,7 @@ class ProductRepository {
         precautions: null,
       ),
       // VARICELA
-      Product(
+      Vaccine(
         id: '12',
         name: 'VARICELA',
         commonName: 'VARICELA',

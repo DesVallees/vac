@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vac/assets/components/detailed_product_card.dart';
 import 'package:vac/assets/dbTempInfo/product_db.dart';
-import 'package:vac/assets/dbTypes/product_model.dart';
+import 'package:vac/assets/dbTypes/product_class.dart';
 
 class Store extends StatelessWidget {
   final ProductRepository productRepository = ProductRepository();

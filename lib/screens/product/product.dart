@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vac/assets/dbTypes/product_model.dart';
+import 'package:vac/assets/dbTypes/product_class.dart'; // Ensure this imports the updated file with subclasses
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
@@ -13,21 +13,21 @@ class ProductDetailPage extends StatelessWidget {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // 1) SliverAppBar with parallax effect
+          // 1) SliverAppBar with parallax effect (Uses common fields)
           SliverAppBar(
             expandedHeight: 250.0,
             pinned: true,
             backgroundColor: theme.colorScheme.primary,
             foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
-              // title: Text(product.name),
+              // title: Text(product.name), // Optional: uses common field
               background: Stack(
                 fit: StackFit.expand,
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(top: 30),
                     child: Image.asset(
-                      product.imageUrl,
+                      product.imageUrl, // Common field
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -54,29 +54,46 @@ class ProductDetailPage extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.stretch, // Stretch button
                 children: [
-                  // Price & basic info card
+                  // Price & basic info card (Uses common fields)
                   _buildMainInfoCard(context),
+                  const SizedBox(height: 16),
+
+                  // --- Conditionally Display Details ---
+                  // Use type checking to show relevant details
+                  if (product is Vaccine)
+                    _buildVaccineDetailsCard(context, product as Vaccine),
+
+                  if (product is Package)
+                    _buildPackageDetailsCard(context, product as Package),
+
+                  if (product is Consultation)
+                    _buildConsultationDetailsCard(
+                        context, product as Consultation),
 
                   const SizedBox(height: 16),
 
-                  // Detailed info card
-                  _buildDetailsCard(context),
-
-                  const SizedBox(height: 16),
-
-                  // Additional info card
-                  _buildAdditionalInfoCard(context),
+                  // Alternative Prices Card (Uses common fields, show if any exist)
+                  _buildAlternativePricesCard(context),
 
                   const SizedBox(height: 24),
 
-                  // Add to Cart Button
+                  // Add to Cart / Schedule Button (Consider changing text based on type)
                   ElevatedButton(
                     onPressed: () {
-                      // TODO: Implement add to cart functionality
+                      // TODO: Implement add to cart / schedule functionality
+                      // Logic might differ based on product type
+                      String message = 'Añadido al carrito';
+                      if (product is Consultation) {
+                        message = 'Proceder a agendar consulta';
+                      } else if (product is Package) {
+                        message = 'Paquete añadido al carrito';
+                      }
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Producto añadido al carrito'),
+                        SnackBar(
+                          content: Text(message),
                         ),
                       );
                     },
@@ -92,8 +109,13 @@ class ProductDetailPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: const Text('Añadir al Carrito'),
+                    // Change button text based on type?
+                    child: Text(product is Consultation
+                        ? 'Agendar Consulta'
+                        : 'Añadir al Carrito'),
                   ),
+
+                  const SizedBox(height: 50),
                 ],
               ),
             ),
@@ -103,7 +125,7 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
-  /// Main Info Card: Shows price, name, common name, short description
+  /// Main Info Card: Shows price, name, common name, short description (Common Fields)
   Widget _buildMainInfoCard(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -154,8 +176,8 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
-  /// Details Card: category, manufacturer, min/max age, dosage, expiry, etc.
-  Widget _buildDetailsCard(BuildContext context) {
+  /// Details Card specific to Vaccines
+  Widget _buildVaccineDetailsCard(BuildContext context, Vaccine vaccine) {
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -164,27 +186,43 @@ class ProductDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Detalles', context),
+            _buildSectionTitle('Detalles de la Vacuna', context),
             const SizedBox(height: 8),
-            _buildDetailRow('Categoría', _getCategoryName(product.category)),
-            _buildDetailRow('Fabricante', product.manufacturer),
-            _buildDetailRow('Edad Mínima', '${product.minAge}'),
-            _buildDetailRow('Edad Máxima', '${product.maxAge}'),
+            _buildDetailRow('Categoría', _getCategoryName(vaccine.category)),
+            _buildDetailRow('Fabricante', vaccine.manufacturer),
+            _buildDetailRow('Edad Mínima', '${vaccine.minAge}'), // Common field
+            _buildDetailRow('Edad Máxima', '${vaccine.maxAge}'), // Common field
             _buildDetailRow(
-              'Doctores Aplicables',
-              product.applicableDoctors.join(', '),
+              'Doctores Aplicables', // Common field
+              vaccine.applicableDoctors.join(', '),
             ),
-            _buildDetailRow('Dosis', product.dosageInfo),
-            if (product.expiryDate != null)
+            _buildDetailRow('Dosis', vaccine.dosageInfo),
+            if (vaccine.expiryDate != null)
               _buildDetailRow(
                 'Fecha de Expiración',
-                '${product.expiryDate!.day}/${product.expiryDate!.month}/${product.expiryDate!.year}',
+                '${vaccine.expiryDate!.day}/${vaccine.expiryDate!.month}/${vaccine.expiryDate!.year}',
               ),
-            if (product.storageInstructions != null &&
-                product.storageInstructions!.isNotEmpty)
+            if (vaccine.storageInstructions != null &&
+                vaccine.storageInstructions!.isNotEmpty)
               _buildDetailRow(
                 'Instrucciones de Almacenamiento',
-                product.storageInstructions!,
+                vaccine.storageInstructions!,
+              ),
+            _buildDetailRow('Enfermedades Objetivo', vaccine.targetDiseases),
+            _buildDetailRow('Dosis y Refuerzos', vaccine.dosesAndBoosters),
+            if (vaccine.contraindications != null &&
+                vaccine.contraindications!.isNotEmpty)
+              _buildDetailRow(
+                'Contraindicaciones',
+                vaccine.contraindications!,
+              ),
+            if (vaccine.precautions != null && vaccine.precautions!.isNotEmpty)
+              _buildDetailRow('Precauciones', vaccine.precautions!),
+            if (vaccine.specialIndications != null && // Common field
+                vaccine.specialIndications!.isNotEmpty)
+              _buildDetailRow(
+                'Indicaciones Especiales',
+                vaccine.specialIndications!,
               ),
           ],
         ),
@@ -192,8 +230,13 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
-  /// Additional Info Card: diseases, doses & boosters, alt prices, special indications, etc.
-  Widget _buildAdditionalInfoCard(BuildContext context) {
+  /// Details Card specific to Packages
+  Widget _buildPackageDetailsCard(BuildContext context, Package package) {
+    // TODO: Consider fetching product names for includedProductIds for better display
+    String includedItemsText = package.includedProductIds.isNotEmpty
+        ? 'IDs: ${package.includedProductIds.join(', ')}' // Simple display for now
+        : 'Ninguno especificado';
+
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -202,10 +245,93 @@ class ProductDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Información Adicional', context),
+            _buildSectionTitle('Detalles del Paquete', context),
             const SizedBox(height: 8),
-            _buildDetailRow('Enfermedades Objetivo', product.targetDiseases),
-            _buildDetailRow('Dosis y Refuerzos', product.dosesAndBoosters),
+            if (package.targetMilestone != null &&
+                package.targetMilestone!.isNotEmpty)
+              _buildDetailRow('Etapa Objetivo', package.targetMilestone!),
+            _buildDetailRow('Edad Mínima', '${package.minAge}'), // Common field
+            _buildDetailRow('Edad Máxima', '${package.maxAge}'), // Common field
+            _buildDetailRow(
+              'Doctores Aplicables', // Common field
+              package.applicableDoctors.join(', '),
+            ),
+            _buildDetailRow('Productos Incluidos', includedItemsText),
+            if (package.specialIndications != null && // Common field
+                package.specialIndications!.isNotEmpty)
+              _buildDetailRow(
+                'Indicaciones Especiales',
+                package.specialIndications!,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Details Card specific to Consultations
+  Widget _buildConsultationDetailsCard(
+      BuildContext context, Consultation consultation) {
+    String durationText = '${consultation.typicalDuration.inMinutes} minutos';
+
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle('Detalles de la Consulta', context),
+            const SizedBox(height: 8),
+            _buildDetailRow('Duración Típica', durationText),
+            _buildDetailRow(
+                'Edad Mínima', '${consultation.minAge}'), // Common field
+            _buildDetailRow(
+                'Edad Máxima', '${consultation.maxAge}'), // Common field
+            _buildDetailRow(
+              'Doctores Aplicables', // Common field
+              consultation.applicableDoctors.join(', '),
+            ),
+            if (consultation.preparationNotes != null &&
+                consultation.preparationNotes!.isNotEmpty)
+              _buildDetailRow(
+                'Notas de Preparación',
+                consultation.preparationNotes!,
+              ),
+            if (consultation.specialIndications != null && // Common field
+                consultation.specialIndications!.isNotEmpty)
+              _buildDetailRow(
+                'Indicaciones Especiales',
+                consultation.specialIndications!,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Card for Alternative Prices (Common Fields) - Only shows if prices exist
+  Widget _buildAlternativePricesCard(BuildContext context) {
+    bool hasAltPrices = product.priceAvacunar != null ||
+        product.priceVita != null ||
+        product.priceColsanitas != null;
+
+    if (!hasAltPrices) {
+      return const SizedBox
+          .shrink(); // Return empty widget if no alternative prices
+    }
+
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle('Precios Alternativos', context),
+            const SizedBox(height: 8),
             if (product.priceAvacunar != null)
               _buildDetailRow(
                 'Precio Avacunar',
@@ -221,28 +347,17 @@ class ProductDetailPage extends StatelessWidget {
                 'Precio Colsanitas',
                 '\$${product.priceColsanitas!.toStringAsFixed(2)}',
               ),
-            if (product.specialIndications != null &&
-                product.specialIndications!.isNotEmpty)
-              _buildDetailRow(
-                'Indicaciones Especiales',
-                product.specialIndications!,
-              ),
-            if (product.contraindications != null &&
-                product.contraindications!.isNotEmpty)
-              _buildDetailRow(
-                'Contraindicaciones',
-                product.contraindications!,
-              ),
-            if (product.precautions != null && product.precautions!.isNotEmpty)
-              _buildDetailRow('Precauciones', product.precautions!),
           ],
         ),
       ),
     );
   }
 
-  // Helper to build a detail row with label & value
+  // --- Helper Widgets ---
+
+  /// Helper to build a detail row with label & value
   Widget _buildDetailRow(String label, String value) {
+    // Handle potentially long values
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -260,7 +375,7 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
-  // Helper to build a section title
+  /// Helper to build a section title
   Widget _buildSectionTitle(String title, BuildContext context) {
     return Text(
       title,
@@ -271,7 +386,7 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
-  // Helper function to get the category name
+  /// Helper function to get the category name (Only used for Vaccine)
   String _getCategoryName(ProductCategory category) {
     switch (category) {
       case ProductCategory.vaccine:
@@ -280,6 +395,8 @@ class ProductDetailPage extends StatelessWidget {
         return 'Medicamento';
       case ProductCategory.supplement:
         return 'Suplemento';
+      default: // Should not happen if enum is exhaustive
+        return 'Desconocido';
     }
   }
 }
