@@ -4,6 +4,7 @@ import 'package:vac/screens/home/home.dart';
 import 'package:vac/screens/landing/introduction.dart';
 import 'package:vac/screens/schedule/schedule.dart';
 import 'package:vac/screens/store/store.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 // Import Firebase Core
 import 'package:firebase_core/firebase_core.dart';
@@ -20,6 +21,9 @@ void main() async {
     options:
         DefaultFirebaseOptions.currentPlatform, // Use the generated options
   );
+
+  // Initialize locale data
+  await initializeDateFormatting('es_ES', null);
 
   // Run app
   runApp(MyApp());

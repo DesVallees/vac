@@ -1,6 +1,6 @@
 // lib/assets/components/search_and_filter_bar.dart
 import 'package:flutter/material.dart';
-import 'package:vac/assets/dbTypes/filter_options.dart';
+import 'package:vac/assets/data_classes/filter_options.dart';
 
 class SearchAndFilterBar extends StatefulWidget {
   final ValueChanged<String> onSearchChanged;

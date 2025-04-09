@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vac/assets/dbTypes/product_class.dart'; // Ensure this imports the updated file with subclasses
+import 'package:vac/assets/data_classes/product.dart'; // Ensure this imports the updated file with subclasses
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;

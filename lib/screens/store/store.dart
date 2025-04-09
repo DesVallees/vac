@@ -1,9 +1,9 @@
 // lib/screens/store/store.dart
 import 'package:flutter/material.dart';
 import 'package:vac/assets/components/detailed_product_card.dart';
-import 'package:vac/assets/dbTempInfo/product_db.dart';
-import 'package:vac/assets/dbTypes/filter_options.dart';
-import 'package:vac/assets/dbTypes/product_class.dart';
+import 'package:vac/assets/dummy_data/products.dart';
+import 'package:vac/assets/data_classes/filter_options.dart';
+import 'package:vac/assets/data_classes/product.dart';
 import 'package:vac/assets/components/search_and_filter_bar.dart'; // Import the new widget
 
 class Store extends StatefulWidget {
