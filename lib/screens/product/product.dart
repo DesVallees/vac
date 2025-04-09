@@ -232,7 +232,7 @@ class ProductDetailPage extends StatelessWidget {
 
   /// Details Card specific to Packages
   Widget _buildPackageDetailsCard(BuildContext context, Package package) {
-    // TODO: Consider fetching product names for includedProductIds for better display
+    // TODO: Fetch product names for includedProductIds for better display
     String includedItemsText = package.includedProductIds.isNotEmpty
         ? 'IDs: ${package.includedProductIds.join(', ')}' // Simple display for now
         : 'Ninguno especificado';

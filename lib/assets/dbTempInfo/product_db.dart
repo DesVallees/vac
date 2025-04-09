@@ -236,7 +236,7 @@ class ProductRepository {
         name: 'BOOSTRIX (Difteria, Tosferina, Tetános -acelular)',
         commonName: 'BOOSTRIX',
         description:
-            'Vacuna combinada para la protección contra difteria, tosferina y tetanos.',
+            'Vacuna combinada para la protección contra difteria, tosferina y tétanos.',
         price: 85000.0,
         priceAvacunar: null,
         priceVita: null,
@@ -250,7 +250,7 @@ class ProductRepository {
         dosageInfo: '2 dosis, 4 semanas de diferencia',
         expiryDate: DateTime(2025, 12, 31),
         storageInstructions: 'Mantener refrigerado entre 2-8°C',
-        targetDiseases: 'Protege contra difteria, tosferina y tetanos.',
+        targetDiseases: 'Protege contra difteria, tosferina y tétanos.',
         dosesAndBoosters: '2 dosis',
         specialIndications: null,
         contraindications: null,

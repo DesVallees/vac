@@ -78,8 +78,11 @@ class _MyHomePageState extends State<MyHomePage> {
         padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
         child: AnimatedSwitcher(
           duration: Duration(milliseconds: 200),
-          child: SingleChildScrollView(
-            child: SizedBox(width: double.infinity, child: page),
+          child: Container(
+            alignment: Alignment.topCenter,
+            child: SingleChildScrollView(
+              child: SizedBox(width: double.infinity, child: page),
+            ),
           ),
         ),
       ),
