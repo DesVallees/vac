@@ -1,37 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:vac/assets/components/introduction_screen.dart';
-import 'package:vac/main.dart';
-
-void goToHome(context) {
-  Navigator.push(context, MaterialPageRoute(builder: (context) {
-    return MyHomePage();
-  }));
-}
 
 class Introduction extends StatefulWidget {
+  final VoidCallback? onDone;
+
+  const Introduction({super.key, this.onDone});
+
   @override
   State<Introduction> createState() => _IntroductionState();
 }
 
 class _IntroductionState extends State<Introduction> {
-  PageController _controller = PageController();
+  final PageController _controller = PageController(); // Make final
   bool isLastPage = false;
-  Color _backgroundColor =
-      const Color.fromRGBO(240, 248, 255, 1.0); // Initial background color
+  Color _backgroundColor = const Color.fromRGBO(240, 248, 255, 1.0);
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(() {
-      // Update background color when page changes
       if (_controller.page != null) {
         int currentPage = _controller.page!.round();
-        setState(() {
-          _backgroundColor = _getBackgroundColor(currentPage);
-        });
+        // Check mounted before calling setState in listener
+        if (mounted) {
+          setState(() {
+            _backgroundColor = _getBackgroundColor(currentPage);
+          });
+        }
       }
     });
+  }
+
+  // --- Function to call when intro is finished/skipped ---
+  void _finishIntroduction(BuildContext context) {
+    // Call the onDone callback passed from AuthWrapper
+    widget.onDone?.call();
+    // Calling widget.onDone?.call() will trigger a rebuild in AuthWrapper,
+    // which will then show either LoginScreen or MyHomePage based on auth state.
   }
 
   Color _getBackgroundColor(int index) {
@@ -47,14 +53,14 @@ class _IntroductionState extends State<Introduction> {
       case 4:
         return const Color.fromRGBO(255, 250, 240, 1.0);
       default:
-        return const Color.fromRGBO(240, 248, 255, 1.0); // Default color
+        return const Color.fromRGBO(240, 248, 255, 1.0);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _backgroundColor, // Set the background color here
+      backgroundColor: _backgroundColor,
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -65,15 +71,13 @@ class _IntroductionState extends State<Introduction> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Image.asset(
-                      'lib/assets/images/logo.png',
-                      width: 50,
-                    ),
+                    Image.asset('lib/assets/images/logo.png', width: 50),
                     TextButton(
                       onPressed: () {
-                        goToHome(context);
+                        // Call the finish function when skipping
+                        _finishIntroduction(context);
                       },
-                      child: Text('Omitir',
+                      child: const Text('Omitir',
                           style: TextStyle(
                             color: Color.fromARGB(153, 71, 0, 150),
                           )),
@@ -89,7 +93,7 @@ class _IntroductionState extends State<Introduction> {
                         _backgroundColor = _getBackgroundColor(value);
                       });
                     },
-                    children: [
+                    children: const [
                       One(),
                       Two(),
                       Three(),
@@ -98,29 +102,29 @@ class _IntroductionState extends State<Introduction> {
                     ],
                   ),
                 ),
-                SmoothPageIndicator(controller: _controller, count: 5),
-                SizedBox(
-                  height: 20,
+                SmoothPageIndicator(
+                  controller: _controller,
+                  count: 5, // Match number of pages
                 ),
+                const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {
                     if (isLastPage) {
-                      goToHome(context);
+                      // Call the finish function when done
+                      _finishIntroduction(context);
                     } else {
                       _controller.nextPage(
-                        duration: Duration(milliseconds: 300),
+                        duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                       );
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    minimumSize:
-                        Size(double.infinity, 60), // Ancho máximo y altura fija
+                    minimumSize: const Size(double.infinity, 60),
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(8), // Menos redondeado
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    padding: EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     backgroundColor: Theme.of(context).colorScheme.primary,
                   ),
                   child: Text(isLastPage ? 'Hecho' : 'Siguiente',

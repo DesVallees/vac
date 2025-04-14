@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vac/screens/home/home.dart';
-import 'package:vac/screens/landing/introduction.dart';
 import 'package:vac/screens/schedule/schedule.dart';
 import 'package:vac/screens/store/store.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:vac/screens/auth/auth.dart'; // Import the AuthWrapper
+import 'package:vac/services/user_data.dart'; // Import the user data service
+import 'package:vac/assets/data_classes/user.dart'; // Import custom User class
 
-// Import Firebase Core
 import 'package:firebase_core/firebase_core.dart';
-// Import the generated options file
 import 'firebase_options.dart';
 
 // Make main async
@@ -35,8 +35,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => MyAppState(),
+    // Instantiate the user data service
+    final userDataService = UserDataService();
+
+    return StreamProvider<User?>.value(
+      value: userDataService.userDataStream,
+      initialData: null, // Initial data is null (no user logged in)
       child: MaterialApp(
         debugShowCheckedModeBanner:
             false, // Hide 'debug' banner when running application
@@ -58,13 +62,11 @@ class MyApp extends StatelessWidget {
         ],
         locale: const Locale('es', 'ES'),
 
-        home: Introduction(),
+        home: const AuthWrapper(),
       ),
     );
   }
 }
-
-class MyAppState extends ChangeNotifier {}
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});

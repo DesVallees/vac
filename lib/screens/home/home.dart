@@ -6,6 +6,9 @@ import 'package:vac/assets/data_classes/appointment.dart'; // Import Appointment
 import 'package:vac/assets/data_classes/product.dart'; // Import Product class
 import 'package:vac/assets/dummy_data/appointments.dart'; // Import dummy appointments
 import 'package:vac/assets/dummy_data/products.dart'; // Import dummy products
+import 'package:provider/provider.dart'; // Import Provider
+import 'package:vac/assets/data_classes/user.dart'; // Import the User class
+import 'package:vac/screens/profile/profile.dart'; // Import the Profile screen
 
 class Home extends StatelessWidget {
   // Callback function to navigate to the schedule page
@@ -250,7 +253,12 @@ class Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Replace 'usuario!' with actual user name from state/auth
+    // Get the current user data from the provider
+    final currentUser = context.watch<User?>(); // Watch for changes
+
+    // Get the photo URL (if available)
+    String? photoUrl = currentUser?.photoUrl;
+
     return Row(
       children: [
         const Text(
@@ -258,15 +266,54 @@ class Header extends StatelessWidget {
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         const SizedBox(width: 5),
-        const Text(
-          'usuario!',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+
+        // Extract the first name
+        Expanded(
+          child: Text(
+            () {
+              String firstName = 'usuario'; // Default fallback
+              if (currentUser != null &&
+                  currentUser.displayName != null &&
+                  currentUser.displayName!.trim().isNotEmpty) {
+                // Trim whitespace, split by space, and take the first part
+                List<String> nameParts =
+                    currentUser.displayName!.trim().split(' ');
+                if (nameParts.isNotEmpty) {
+                  firstName = nameParts.first;
+                } else {
+                  firstName = currentUser
+                      .displayName!; // Fallback to full name if split fails unexpectedly
+                }
+              }
+              return '$firstName!';
+            }(),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            overflow: TextOverflow.ellipsis, // Handle overflow with ellipsis
+            maxLines: 1,
+            softWrap: false, // Prevent wrapping to the next line
+          ),
         ),
-        const Spacer(), // Use const
-        const CircleAvatar(
-          // Use const if image is static asset
-          radius: 25,
-          backgroundImage: AssetImage('lib/assets/images/home_banner.webp'),
+
+        InkWell(
+          onTap: () {
+            // Navigate to ProfileScreen when tapped
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ProfileScreen()),
+            );
+          },
+          customBorder: const CircleBorder(), // Make the ripple effect circular
+          child: CircleAvatar(
+            radius: 25,
+            backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+                ? NetworkImage(photoUrl) // Load from network if URL exists
+                : const AssetImage('lib/assets/images/default_avatar.png')
+                    as ImageProvider,
+            onBackgroundImageError: (exception, stackTrace) {
+              print('Error loading profile image: $exception');
+            },
+            backgroundColor: Colors.grey[200], // Background for placeholder
+          ),
         ),
       ],
     );
