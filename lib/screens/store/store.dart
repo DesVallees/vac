@@ -193,6 +193,3 @@ class _StoreState extends State<Store> {
     );
   }
 }
-
-// Remove the old SearchBar class from this file if it exists
-// class SearchBar extends StatelessWidget { ... } // DELETE THIS

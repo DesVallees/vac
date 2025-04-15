@@ -1,20 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// Helper function for DateTime/Timestamp conversion (can be shared or defined here)
+DateTime? _dateTimeFromTimestamp(Timestamp? timestamp) => timestamp?.toDate();
+Timestamp? _dateTimeToTimestamp(DateTime? dateTime) =>
+    dateTime == null ? null : Timestamp.fromDate(dateTime);
+
 // --- Enum for User Type ---
-// Useful for determining the subclass type when reading from database
 enum UserType { normal, pediatrician }
 
 // --- Abstract User Superclass ---
 abstract class User {
-  final String id; // Corresponds to Firebase Auth UID
+  final String id;
   final String email;
   final String? displayName;
   final String? photoUrl;
   final String? phoneNumber;
   final DateTime createdAt;
   final DateTime? lastLoginAt;
-  final bool isAdmin; // Any user type can be an admin
-  final UserType userType; // To know which subclass this object represents
+  final bool isAdmin;
+  final UserType userType;
 
   User({
     required this.id,
@@ -29,57 +33,55 @@ abstract class User {
   });
 
   /// Common method to convert base user data to Firestore map.
-  /// Subclasses should call this and add their specific fields.
   Map<String, dynamic> toFirestoreBase() {
     return {
       'email': email,
       'displayName': displayName,
       'photoUrl': photoUrl,
       'phoneNumber': phoneNumber,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'lastLoginAt':
-          lastLoginAt != null ? Timestamp.fromDate(lastLoginAt!) : null,
+      'createdAt':
+          _dateTimeToTimestamp(createdAt)!, // createdAt should not be null
+      'lastLoginAt': _dateTimeToTimestamp(lastLoginAt),
       'isAdmin': isAdmin,
-      'userType': userType.toString(), // Store enum as string
+      'userType': userType.toString(),
     };
   }
 
   /// Factory constructor to create the correct User subclass from Firestore data.
-  factory User.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  factory User.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    // Use typed snapshot
+    Map<String, dynamic> data = doc.data()!; // Data should exist
 
-    // Determine the user type from the stored string
-    UserType type = UserType.values.firstWhere(
-      (e) => e.toString() == data['userType'],
-      orElse: () => UserType.normal, // Default to normal if missing/invalid
-    );
+    UserType type = UserType.values
+        .firstWhere((e) => e.toString() == data['userType'], orElse: () {
+      print(
+          "Warning: Missing or invalid userType '${data['userType']}' for doc ${doc.id}. Defaulting to NormalUser.");
+      return UserType.normal; // Default to normal if missing/invalid
+    });
 
-    // Call the specific subclass factory constructor
     switch (type) {
       case UserType.normal:
         return NormalUser.fromFirestore(doc);
       case UserType.pediatrician:
         return Pediatrician.fromFirestore(doc);
-      default:
-        // Fallback to normal user if type is unrecognized
-        print(
-            "Warning: Unrecognized userType '${data['userType']}'. Defaulting to NormalUser.");
-        return NormalUser.fromFirestore(doc);
+      // No default needed as enum covers all cases, but added robustness in orElse
     }
   }
 
-  // Abstract method to ensure subclasses implement their full Firestore conversion
+  // Abstract method for full Firestore conversion
   Map<String, dynamic> toFirestore();
+
+  // Abstract copyWith (optional, subclasses must implement fully)
+  // User copyWith(); // Decided against abstract copyWith, implement in subclasses
 }
 
 // --- NormalUser Subclass ---
 class NormalUser extends User {
-  final List<String>?
-      patientProfileIds; // IDs of associated patient profiles (e.g., children)
-  final String? preferredLocationId; // Optional: Default clinic preference
+  final List<String>
+      patientProfileIds; // Changed to non-nullable, default to empty list
+  final String? preferredLocationId;
 
   NormalUser({
-    // Fields from superclass
     required super.id,
     required super.email,
     super.displayName,
@@ -88,53 +90,81 @@ class NormalUser extends User {
     required super.createdAt,
     super.lastLoginAt,
     required super.isAdmin,
-
-    // Specific fields for NormalUser
-    this.patientProfileIds,
+    List<String>?
+        patientProfileIds, // Allow nullable in constructor for convenience
     this.preferredLocationId,
-  }) : super(userType: UserType.normal); // Set the userType
+  })  : patientProfileIds =
+            patientProfileIds ?? [], // Ensure it's always a list
+        super(userType: UserType.normal);
 
   /// Factory constructor for NormalUser from Firestore
-  factory NormalUser.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  factory NormalUser.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    Map<String, dynamic> data = doc.data()!;
     return NormalUser(
       id: doc.id,
-      email: data['email'] ?? '',
-      displayName: data['displayName'],
-      photoUrl: data['photoUrl'],
-      phoneNumber: data['phoneNumber'],
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      lastLoginAt: (data['lastLoginAt'] as Timestamp?)?.toDate(),
-      isAdmin: data['isAdmin'] ?? false,
-      patientProfileIds: List<String>.from(data['patientProfileIds'] ?? []),
-      preferredLocationId: data['preferredLocationId'],
+      email: data['email'] as String? ?? '',
+      displayName: data['displayName'] as String?,
+      photoUrl: data['photoUrl'] as String?,
+      phoneNumber: data['phoneNumber'] as String?,
+      createdAt: _dateTimeFromTimestamp(data['createdAt'] as Timestamp?) ??
+          DateTime.now(), // Fallback
+      lastLoginAt: _dateTimeFromTimestamp(data['lastLoginAt'] as Timestamp?),
+      isAdmin: data['isAdmin'] as bool? ?? false,
+      patientProfileIds: List<String>.from(
+          data['patientProfileIds'] as List<dynamic>? ??
+              []), // Safe list parsing
+      preferredLocationId: data['preferredLocationId'] as String?,
     );
   }
 
   /// Convert NormalUser instance to Firestore map
   @override
   Map<String, dynamic> toFirestore() {
-    // Start with base user data
     final baseData = super.toFirestoreBase();
-    // Add specific NormalUser fields
     baseData.addAll({
       'patientProfileIds': patientProfileIds,
       'preferredLocationId': preferredLocationId,
     });
     return baseData;
   }
+
+  /// CopyWith method for NormalUser
+  NormalUser copyWith({
+    String? id,
+    String? email,
+    String? displayName,
+    String? photoUrl,
+    String? phoneNumber,
+    DateTime? createdAt,
+    DateTime? lastLoginAt,
+    bool? isAdmin,
+    List<String>? patientProfileIds,
+    String? preferredLocationId,
+  }) {
+    return NormalUser(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      displayName: displayName ?? this.displayName,
+      photoUrl: photoUrl ?? this.photoUrl,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      createdAt: createdAt ?? this.createdAt,
+      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      isAdmin: isAdmin ?? this.isAdmin,
+      patientProfileIds: patientProfileIds ?? this.patientProfileIds,
+      preferredLocationId: preferredLocationId ?? this.preferredLocationId,
+    );
+  }
 }
 
 // --- Pediatrician Subclass ---
 class Pediatrician extends User {
-  final String specialty; // e.g., "Pediatría", "Medicina General"
-  final String licenseNumber; // Professional license ID
-  final List<String> clinicLocationIds; // IDs of clinics where they work
-  final String? bio; // Optional short biography
-  final int? yearsExperience; // Optional years of experience
+  final String specialty;
+  final String licenseNumber;
+  final List<String> clinicLocationIds; // Changed to non-nullable
+  final String? bio;
+  final int? yearsExperience;
 
   Pediatrician({
-    // Fields from superclass
     required super.id,
     required super.email,
     super.displayName,
@@ -143,41 +173,43 @@ class Pediatrician extends User {
     required super.createdAt,
     super.lastLoginAt,
     required super.isAdmin,
-
-    // Specific fields for Pediatrician
     required this.specialty,
     required this.licenseNumber,
-    required this.clinicLocationIds,
+    List<String>? clinicLocationIds, // Allow nullable in constructor
     this.bio,
     this.yearsExperience,
-  }) : super(userType: UserType.pediatrician); // Set the userType
+  })  : clinicLocationIds =
+            clinicLocationIds ?? [], // Ensure it's always a list
+        super(userType: UserType.pediatrician);
 
   /// Factory constructor for Pediatrician from Firestore
-  factory Pediatrician.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  factory Pediatrician.fromFirestore(
+      DocumentSnapshot<Map<String, dynamic>> doc) {
+    Map<String, dynamic> data = doc.data()!;
     return Pediatrician(
       id: doc.id,
-      email: data['email'] ?? '',
-      displayName: data['displayName'],
-      photoUrl: data['photoUrl'],
-      phoneNumber: data['phoneNumber'],
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      lastLoginAt: (data['lastLoginAt'] as Timestamp?)?.toDate(),
-      isAdmin: data['isAdmin'] ?? false,
-      specialty: data['specialty'] ?? 'Desconocido',
-      licenseNumber: data['licenseNumber'] ?? '',
-      clinicLocationIds: List<String>.from(data['clinicLocationIds'] ?? []),
-      bio: data['bio'],
-      yearsExperience: data['yearsExperience'],
+      email: data['email'] as String? ?? '',
+      displayName: data['displayName'] as String?,
+      photoUrl: data['photoUrl'] as String?,
+      phoneNumber: data['phoneNumber'] as String?,
+      createdAt: _dateTimeFromTimestamp(data['createdAt'] as Timestamp?) ??
+          DateTime.now(), // Fallback
+      lastLoginAt: _dateTimeFromTimestamp(data['lastLoginAt'] as Timestamp?),
+      isAdmin: data['isAdmin'] as bool? ?? false,
+      specialty: data['specialty'] as String? ?? 'Desconocido',
+      licenseNumber: data['licenseNumber'] as String? ?? '',
+      clinicLocationIds: List<String>.from(
+          data['clinicLocationIds'] as List<dynamic>? ??
+              []), // Safe list parsing
+      bio: data['bio'] as String?,
+      yearsExperience: data['yearsExperience'] as int?,
     );
   }
 
   /// Convert Pediatrician instance to Firestore map
   @override
   Map<String, dynamic> toFirestore() {
-    // Start with base user data
     final baseData = super.toFirestoreBase();
-    // Add specific Pediatrician fields
     baseData.addAll({
       'specialty': specialty,
       'licenseNumber': licenseNumber,
@@ -186,5 +218,38 @@ class Pediatrician extends User {
       'yearsExperience': yearsExperience,
     });
     return baseData;
+  }
+
+  /// CopyWith method for Pediatrician
+  Pediatrician copyWith({
+    String? id,
+    String? email,
+    String? displayName,
+    String? photoUrl,
+    String? phoneNumber,
+    DateTime? createdAt,
+    DateTime? lastLoginAt,
+    bool? isAdmin,
+    String? specialty,
+    String? licenseNumber,
+    List<String>? clinicLocationIds,
+    String? bio,
+    int? yearsExperience,
+  }) {
+    return Pediatrician(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      displayName: displayName ?? this.displayName,
+      photoUrl: photoUrl ?? this.photoUrl,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      createdAt: createdAt ?? this.createdAt,
+      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      isAdmin: isAdmin ?? this.isAdmin,
+      specialty: specialty ?? this.specialty,
+      licenseNumber: licenseNumber ?? this.licenseNumber,
+      clinicLocationIds: clinicLocationIds ?? this.clinicLocationIds,
+      bio: bio ?? this.bio,
+      yearsExperience: yearsExperience ?? this.yearsExperience,
+    );
   }
 }

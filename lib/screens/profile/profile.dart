@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart'
 import 'package:vac/assets/data_classes/user.dart'; // Import the User class
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:vac/assets/helpers/functions.dart';
+import 'package:vac/screens/history/history.dart';
 
 // Placeholder for the Medical Records screen
 class MedicalRecordsScreen extends StatelessWidget {
@@ -112,7 +113,7 @@ class ProfileScreen extends StatelessWidget {
 
             if (currentUser is NormalUser) ...[
               _buildInfoTile(Icons.group_outlined, 'Perfiles Pacientes',
-                  (currentUser).patientProfileIds?.length.toString() ?? '0'),
+                  (currentUser).patientProfileIds.length.toString()),
             ],
 
             if (currentUser.phoneNumber != null &&
@@ -131,11 +132,12 @@ class ProfileScreen extends StatelessWidget {
               title: const Text('Historial Médico'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                // TODO: Navigate to the actual Medical Records screen
+                // Navigate to the actual Medical History screen
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const MedicalRecordsScreen()),
+                      builder: (context) =>
+                          const MedicalHistoryScreen()), // Use the new screen
                 );
               },
             ),
