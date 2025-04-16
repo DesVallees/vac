@@ -8,7 +8,10 @@ import 'package:vac/assets/dummy_data/appointments.dart'; // Import dummy appoin
 import 'package:vac/assets/dummy_data/products.dart'; // Import dummy products
 import 'package:provider/provider.dart'; // Import Provider
 import 'package:vac/assets/data_classes/user.dart'; // Import the User class
+import 'package:vac/screens/history/history.dart';
 import 'package:vac/screens/profile/profile.dart'; // Import the Profile screen
+import 'package:vac/screens/new_appointment/new_appointment.dart';
+import 'package:vac/screens/settings/settings.dart'; // Import the new appointment screen
 
 class Home extends StatelessWidget {
   // Callback function to navigate to the schedule page
@@ -65,22 +68,60 @@ class Home extends StatelessWidget {
           ),
           const SizedBox(height: 30),
 
-          // Services (Keep as is)
+          // Services
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildServiceIcon(
-                  Icons.person_add_alt_1, Colors.blue), // User/Patient related
+                Icons.person_outline, // Icon for Profile
+                Colors.blue,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const ProfileScreen()),
+                  );
+                },
+              ),
               _buildServiceIcon(
-                  Icons.medical_services, Colors.orange), // Services/Vaccines
+                Icons.settings_outlined, // Icon for Settings
+                Colors.orange,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const SettingsScreen()),
+                  );
+                },
+              ),
               _buildServiceIcon(
-                  Icons.fact_check, Colors.teal), // Checkups/Results
-              _buildServiceIcon(Icons.location_on, Colors.red), // Locations
+                Icons.receipt_long_outlined, // Icon for Medical History
+                Colors.teal,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const MedicalHistoryScreen()),
+                  );
+                },
+              ),
+              _buildServiceIcon(
+                Icons.add_circle_outline, // Icon for Create Appointment
+                Colors.red,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) =>
+                            const ScheduleAppointmentScreen()),
+                  );
+                },
+              ),
             ],
           ),
+
           const SizedBox(height: 20),
 
-          // Banner (Keep as is)
           _buildPromotionalBanner(),
           const SizedBox(height: 40),
 
@@ -93,22 +134,18 @@ class Home extends StatelessWidget {
           if (featuredPackages.isEmpty)
             const Text('No hay paquetes destacados disponibles.')
           else
-            GridView.builder(
+            ListView.separated(
               padding: EdgeInsets.zero,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.6, // Adjust as needed for your card layout
-                crossAxisSpacing: 15,
-                mainAxisSpacing: 15,
-              ),
               itemCount: featuredPackages.length,
               itemBuilder: (context, index) {
-                // Use the filtered list
+                // Returns the card, which will now size itself
                 return DetailedProductCard(product: featuredPackages[index]);
               },
+              separatorBuilder: (context, index) => const SizedBox(height: 15),
             ),
+
           const SizedBox(height: 10), // Spacing before button
 
           // Button to navigate to Store screen
@@ -171,19 +208,25 @@ class Home extends StatelessWidget {
     );
   }
 
-  // Keep helper methods _buildServiceIcon and _buildPromotionalBanner
-  Widget _buildServiceIcon(IconData icon, Color color) {
-    return Container(
-      height: 60,
-      width: 60,
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 30,
+  Widget _buildServiceIcon(IconData icon, Color color, VoidCallback? onTap) {
+    // Add VoidCallback? onTap parameter
+    return InkWell(
+      // Wrap with InkWell
+      onTap: onTap, // Use the passed onTap callback
+      borderRadius: BorderRadius.circular(
+          15), // Match the container's border radius for ripple effect
+      child: Container(
+        height: 60,
+        width: 60,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Icon(
+          icon,
+          color: color,
+          size: 30,
+        ),
       ),
     );
   }

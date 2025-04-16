@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vac/assets/data_classes/product.dart';
 import 'package:vac/screens/new_appointment/new_appointment.dart';
+import 'package:intl/intl.dart'; // Import for date formatting
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
@@ -10,338 +11,378 @@ class ProductDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    // Use scaffoldBackgroundColor for the content area
+    final contentBackgroundColor = theme.scaffoldBackgroundColor;
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // 1) SliverAppBar with parallax effect (Uses common fields)
-          SliverAppBar(
-            expandedHeight: 250.0,
-            pinned: true,
-            backgroundColor: theme.colorScheme.primary,
-            foregroundColor: Colors.white,
-            flexibleSpace: FlexibleSpaceBar(
-              // title: Text(product.name), // Optional: uses common field
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 30),
-                    child: Image.asset(
-                      product.imageUrl, // Common field
-                      fit: BoxFit.cover,
+      // No longer need extendBodyBehindAppBar here, NestedScrollView handles it
+      // extendBodyBehindAppBar: true,
+      body: NestedScrollView(
+        // 1. headerSliverBuilder contains the AppBar and Absorber
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return <Widget>[
+            SliverOverlapAbsorber(
+              handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+              sliver: SliverAppBar(
+                expandedHeight: 300.0,
+                pinned: true,
+                stretch: true,
+                backgroundColor: Colors.transparent, // Keep transparent
+                foregroundColor:
+                    Colors.white, // Keep white for contrast on image
+                elevation: 0,
+                // Change AppBar background color ONLY when collapsed (optional, requires more complex state)
+                // surfaceTintColor: innerBoxIsScrolled ? theme.colorScheme.surface : Colors.transparent,
+
+                flexibleSpace: FlexibleSpaceBar(
+                  title: Text(
+                    product.commonName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16.0,
+                      fontWeight: FontWeight.bold,
+                      shadows: [Shadow(blurRadius: 2.0, color: Colors.black54)],
                     ),
                   ),
-                  // Optionally, a gradient overlay for better text contrast
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.black.withOpacity(0.4),
-                          Colors.transparent
-                        ],
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
+                  titlePadding:
+                      const EdgeInsets.only(left: 50, bottom: 16, right: 50),
+                  centerTitle: true,
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        product.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[300],
+                            child: Center(
+                              child: Icon(Icons.image_not_supported_outlined,
+                                  color: Colors.grey[500], size: 60),
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // 2) SliverToBoxAdapter to hold the body content
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.stretch, // Stretch button
-                children: [
-                  // Price & basic info card (Uses common fields)
-                  _buildMainInfoCard(context),
-                  const SizedBox(height: 16),
-
-                  // --- Conditionally Display Details ---
-                  // Use type checking to show relevant details
-                  if (product is Vaccine)
-                    _buildVaccineDetailsCard(context, product as Vaccine),
-
-                  if (product is Package)
-                    _buildPackageDetailsCard(context, product as Package),
-
-                  if (product is Consultation)
-                    _buildConsultationDetailsCard(
-                        context, product as Consultation),
-
-                  const SizedBox(height: 16),
-
-                  // Alternative Prices Card (Uses common fields, show if any exist)
-                  _buildAlternativePricesCard(context),
-
-                  const SizedBox(height: 24),
-
-                  ElevatedButton(
-                    onPressed: () {
-                      // Navigate to the ScheduleAppointmentScreen, passing the product
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              ScheduleAppointmentScreen(product: product),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withOpacity(0.6),
+                              Colors.black.withOpacity(0.2),
+                              Colors.transparent
+                            ],
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            stops: const [0.0, 0.4, 1.0],
+                          ),
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 40,
-                        vertical: 15,
                       ),
-                      textStyle: const TextStyle(fontSize: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                    ],
+                  ),
+                  stretchModes: const [
+                    StretchMode.zoomBackground,
+                    StretchMode.fadeTitle
+                  ],
+                ),
+              ),
+            ),
+          ];
+        },
+        // 2. body contains the scrollable content below the AppBar
+        body: Builder(
+          builder: (BuildContext context) {
+            return CustomScrollView(
+              // The scroll view that holds the content.
+              slivers: <Widget>[
+                // 3. Inject the overlap padding calculated by the Absorber
+                SliverOverlapInjector(
+                  handle:
+                      NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+                ),
+                // 4. Use SliverToBoxAdapter to hold the main content Container
+                SliverToBoxAdapter(
+                  child: Container(
+                    // This container provides the background and rounded corners
+                    decoration: BoxDecoration(
+                      color: contentBackgroundColor, // Use scaffold background
+                      borderRadius: const BorderRadius.only(
+                        topLeft:
+                            Radius.circular(24.0), // Adjust radius as needed
+                        topRight: Radius.circular(24.0),
                       ),
                     ),
-                    child: const Text('Agendar Cita'),
+                    // Add padding *inside* the container for the content
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // --- Main Info Section ---
+                          _buildMainInfoSection(context),
+                          const SizedBox(height: 16),
+                          const Divider(),
+                          const SizedBox(height: 16),
+
+                          // --- Conditionally Display Details ---
+                          if (product is Vaccine)
+                            _buildVaccineDetailsSection(
+                                context, product as Vaccine),
+                          if (product is Package)
+                            _buildPackageDetailsSection(
+                                context, product as Package),
+                          if (product is Consultation)
+                            _buildConsultationDetailsSection(
+                                context, product as Consultation),
+
+                          // --- Alternative Prices Section (Conditional) ---
+                          _buildAlternativePricesSection(context),
+
+                          const SizedBox(height: 30), // Space before button
+
+                          // --- Action Button ---
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ScheduleAppointmentScreen(
+                                          product: product),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: theme.colorScheme.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 15),
+                              textStyle: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              minimumSize: const Size(double.infinity, 50),
+                            ),
+                            child: const Text('Agendar Cita'),
+                          ),
+
+                          const SizedBox(height: 40), // Bottom padding
+                        ],
+                      ),
+                    ),
                   ),
-
-                  const SizedBox(height: 50),
-                ],
-              ),
-            ),
-          ),
-        ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 
-  /// Main Info Card: Shows price, name, common name, short description (Common Fields)
-  Widget _buildMainInfoCard(BuildContext context) {
+  // --- Section Builder Methods (No changes needed here) ---
+  // _buildMainInfoSection, _buildVaccineDetailsSection, etc. remain the same
+  // ... (Keep all your _build... methods as they were) ...
+
+  /// Main Info Section: Shows price, name, common name, description
+  Widget _buildMainInfoSection(BuildContext context) {
     final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
 
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Product name
-            Text(
-              product.name,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-
-            // Common Name
-            Text(
-              product.commonName,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: Colors.grey.shade700,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Price
-            Text(
-              '\$${product.price.toStringAsFixed(2)}',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Short description
-            Text(
-              product.description,
-              style: theme.textTheme.bodyMedium,
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Product name
+        Text(
+          product.name,
+          style: textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
-      ),
+        const SizedBox(height: 4),
+
+        // Common Name
+        Text(
+          product.commonName,
+          style: textTheme.titleMedium?.copyWith(
+            color: Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Price
+        Text(
+          NumberFormat.currency(locale: 'es_CO', symbol: '\$', decimalDigits: 0)
+              .format(product.price), // Format currency
+          style: textTheme.headlineSmall?.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Description
+        Text(
+          product.description,
+          style: textTheme.bodyLarge?.copyWith(height: 1.4), // Slightly larger
+        ),
+      ],
     );
   }
 
-  /// Details Card specific to Vaccines
-  Widget _buildVaccineDetailsCard(BuildContext context, Vaccine vaccine) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Detalles de la Vacuna', context),
-            const SizedBox(height: 8),
-            _buildDetailRow('Categoría', _getCategoryName(vaccine.category)),
-            _buildDetailRow('Fabricante', vaccine.manufacturer),
-            _buildDetailRow('Edad Mínima', '${vaccine.minAge}'), // Common field
-            _buildDetailRow('Edad Máxima', '${vaccine.maxAge}'), // Common field
-            _buildDetailRow(
-              'Doctores Aplicables', // Common field
-              vaccine.applicableDoctors.join(', '),
-            ),
-            _buildDetailRow('Dosis', vaccine.dosageInfo),
-            if (vaccine.expiryDate != null)
-              _buildDetailRow(
-                'Fecha de Expiración',
-                '${vaccine.expiryDate!.day}/${vaccine.expiryDate!.month}/${vaccine.expiryDate!.year}',
-              ),
-            if (vaccine.storageInstructions != null &&
-                vaccine.storageInstructions!.isNotEmpty)
-              _buildDetailRow(
-                'Instrucciones de Almacenamiento',
-                vaccine.storageInstructions!,
-              ),
-            _buildDetailRow('Enfermedades Objetivo', vaccine.targetDiseases),
-            _buildDetailRow('Dosis y Refuerzos', vaccine.dosesAndBoosters),
-            if (vaccine.contraindications != null &&
-                vaccine.contraindications!.isNotEmpty)
-              _buildDetailRow(
-                'Contraindicaciones',
-                vaccine.contraindications!,
-              ),
-            if (vaccine.precautions != null && vaccine.precautions!.isNotEmpty)
-              _buildDetailRow('Precauciones', vaccine.precautions!),
-            if (vaccine.specialIndications != null && // Common field
-                vaccine.specialIndications!.isNotEmpty)
-              _buildDetailRow(
-                'Indicaciones Especiales',
-                vaccine.specialIndications!,
-              ),
-          ],
-        ),
-      ),
+  /// Details Section specific to Vaccines
+  Widget _buildVaccineDetailsSection(BuildContext context, Vaccine vaccine) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Detalles de la Vacuna', context),
+        const SizedBox(height: 12),
+        _buildDetailRow('Categoría', _getCategoryName(vaccine.category)),
+        _buildDetailRow('Fabricante', vaccine.manufacturer),
+        _buildDetailRow('Edad Mínima', '${vaccine.minAge} meses'),
+        _buildDetailRow('Edad Máxima', '${vaccine.maxAge} meses'),
+        _buildDetailRow(
+            'Doctores Aplicables', vaccine.applicableDoctors.join(', ')),
+        _buildDetailRow('Dosis', vaccine.dosageInfo),
+        if (vaccine.expiryDate != null)
+          _buildDetailRow(
+            'Fecha de Expiración',
+            DateFormat.yMMMd('es_ES').format(vaccine.expiryDate!),
+          ),
+        if (vaccine.storageInstructions != null &&
+            vaccine.storageInstructions!.isNotEmpty)
+          _buildDetailRow(
+            'Almacenamiento',
+            vaccine.storageInstructions!,
+          ),
+        _buildDetailRow('Enfermedades Objetivo', vaccine.targetDiseases),
+        _buildDetailRow('Dosis y Refuerzos', vaccine.dosesAndBoosters),
+        if (vaccine.contraindications != null &&
+            vaccine.contraindications!.isNotEmpty)
+          _buildDetailRow(
+            'Contraindicaciones',
+            vaccine.contraindications!,
+          ),
+        if (vaccine.precautions != null && vaccine.precautions!.isNotEmpty)
+          _buildDetailRow('Precauciones', vaccine.precautions!),
+        if (vaccine.specialIndications != null &&
+            vaccine.specialIndications!.isNotEmpty)
+          _buildDetailRow(
+            'Indicaciones Especiales',
+            vaccine.specialIndications!,
+          ),
+        const SizedBox(height: 16),
+        const Divider(), // Add divider after section
+        const SizedBox(height: 16),
+      ],
     );
   }
 
-  /// Details Card specific to Packages
-  Widget _buildPackageDetailsCard(BuildContext context, Package package) {
+  /// Details Section specific to Packages
+  Widget _buildPackageDetailsSection(BuildContext context, Package package) {
     // TODO: Fetch product names for includedProductIds for better display
     String includedItemsText = package.includedProductIds.isNotEmpty
         ? 'IDs: ${package.includedProductIds.join(', ')}' // Simple display for now
         : 'Ninguno especificado';
 
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Detalles del Paquete', context),
-            const SizedBox(height: 8),
-            if (package.targetMilestone != null &&
-                package.targetMilestone!.isNotEmpty)
-              _buildDetailRow('Etapa Objetivo', package.targetMilestone!),
-            _buildDetailRow('Edad Mínima', '${package.minAge}'), // Common field
-            _buildDetailRow('Edad Máxima', '${package.maxAge}'), // Common field
-            _buildDetailRow(
-              'Doctores Aplicables', // Common field
-              package.applicableDoctors.join(', '),
-            ),
-            _buildDetailRow('Productos Incluidos', includedItemsText),
-            if (package.specialIndications != null && // Common field
-                package.specialIndications!.isNotEmpty)
-              _buildDetailRow(
-                'Indicaciones Especiales',
-                package.specialIndications!,
-              ),
-          ],
-        ),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Detalles del Paquete', context),
+        const SizedBox(height: 12),
+        if (package.targetMilestone != null &&
+            package.targetMilestone!.isNotEmpty)
+          _buildDetailRow('Etapa Objetivo', package.targetMilestone!),
+        _buildDetailRow('Edad Mínima', '${package.minAge} meses'),
+        _buildDetailRow('Edad Máxima', '${package.maxAge} meses'),
+        _buildDetailRow(
+            'Doctores Aplicables', package.applicableDoctors.join(', ')),
+        _buildDetailRow('Productos Incluidos', includedItemsText),
+        if (package.specialIndications != null &&
+            package.specialIndications!.isNotEmpty)
+          _buildDetailRow(
+            'Indicaciones Especiales',
+            package.specialIndications!,
+          ),
+        const SizedBox(height: 16),
+        const Divider(), // Add divider after section
+        const SizedBox(height: 16),
+      ],
     );
   }
 
-  /// Details Card specific to Consultations
-  Widget _buildConsultationDetailsCard(
+  /// Details Section specific to Consultations
+  Widget _buildConsultationDetailsSection(
       BuildContext context, Consultation consultation) {
     String durationText = '${consultation.typicalDuration.inMinutes} minutos';
 
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Detalles de la Consulta', context),
-            const SizedBox(height: 8),
-            _buildDetailRow('Duración Típica', durationText),
-            _buildDetailRow(
-                'Edad Mínima', '${consultation.minAge}'), // Common field
-            _buildDetailRow(
-                'Edad Máxima', '${consultation.maxAge}'), // Common field
-            _buildDetailRow(
-              'Doctores Aplicables', // Common field
-              consultation.applicableDoctors.join(', '),
-            ),
-            if (consultation.preparationNotes != null &&
-                consultation.preparationNotes!.isNotEmpty)
-              _buildDetailRow(
-                'Notas de Preparación',
-                consultation.preparationNotes!,
-              ),
-            if (consultation.specialIndications != null && // Common field
-                consultation.specialIndications!.isNotEmpty)
-              _buildDetailRow(
-                'Indicaciones Especiales',
-                consultation.specialIndications!,
-              ),
-          ],
-        ),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Detalles de la Consulta', context),
+        const SizedBox(height: 12),
+        _buildDetailRow('Duración Típica', durationText),
+        _buildDetailRow('Edad Mínima', '${consultation.minAge} meses'),
+        _buildDetailRow('Edad Máxima', '${consultation.maxAge} meses'),
+        _buildDetailRow(
+            'Doctores Aplicables', consultation.applicableDoctors.join(', ')),
+        if (consultation.preparationNotes != null &&
+            consultation.preparationNotes!.isNotEmpty)
+          _buildDetailRow(
+            'Notas de Preparación',
+            consultation.preparationNotes!,
+          ),
+        if (consultation.specialIndications != null &&
+            consultation.specialIndications!.isNotEmpty)
+          _buildDetailRow(
+            'Indicaciones Especiales',
+            consultation.specialIndications!,
+          ),
+        const SizedBox(height: 16),
+        const Divider(), // Add divider after section
+        const SizedBox(height: 16),
+      ],
     );
   }
 
-  /// Card for Alternative Prices (Common Fields) - Only shows if prices exist
-  Widget _buildAlternativePricesCard(BuildContext context) {
+  /// Section for Alternative Prices - Only shows if prices exist
+  Widget _buildAlternativePricesSection(BuildContext context) {
     bool hasAltPrices = product.priceAvacunar != null ||
         product.priceVita != null ||
         product.priceColsanitas != null;
 
     if (!hasAltPrices) {
-      return const SizedBox
-          .shrink(); // Return empty widget if no alternative prices
+      return const SizedBox.shrink(); // Return empty if no alternative prices
     }
 
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Precios Alternativos', context),
-            const SizedBox(height: 8),
-            if (product.priceAvacunar != null)
-              _buildDetailRow(
-                'Precio Avacunar',
-                '\$${product.priceAvacunar!.toStringAsFixed(2)}',
-              ),
-            if (product.priceVita != null)
-              _buildDetailRow(
-                'Precio Vita',
-                '\$${product.priceVita!.toStringAsFixed(2)}',
-              ),
-            if (product.priceColsanitas != null)
-              _buildDetailRow(
-                'Precio Colsanitas',
-                '\$${product.priceColsanitas!.toStringAsFixed(2)}',
-              ),
-          ],
-        ),
-      ),
+    // Use NumberFormat for currency formatting
+    final currencyFormat =
+        NumberFormat.currency(locale: 'es_CO', symbol: '\$', decimalDigits: 0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Precios Alternativos', context),
+        const SizedBox(height: 12),
+        if (product.priceAvacunar != null)
+          _buildDetailRow(
+            'Precio Avacunar',
+            currencyFormat.format(product.priceAvacunar!),
+          ),
+        if (product.priceVita != null)
+          _buildDetailRow(
+            'Precio Vita',
+            currencyFormat.format(product.priceVita!),
+          ),
+        if (product.priceColsanitas != null)
+          _buildDetailRow(
+            'Precio Colsanitas',
+            currencyFormat.format(product.priceColsanitas!),
+          ),
+        const SizedBox(height: 16),
+        const Divider(), // Add divider after section
+        const SizedBox(height: 16),
+      ],
     );
   }
 
@@ -349,32 +390,39 @@ class ProductDetailPage extends StatelessWidget {
 
   /// Helper to build a detail row with label & value
   Widget _buildDetailRow(String label, String value) {
-    // Handle potentially long values
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '$label: ',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                fontWeight: FontWeight.w600, // Slightly bolder label
+                fontSize: 15),
           ),
           Expanded(
-            child: Text(value),
+            child: Text(
+              value,
+              style: TextStyle(fontSize: 15, color: Colors.grey.shade800),
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Helper to build a section title
+  /// Helper to build a section title (No longer needs Card context)
   Widget _buildSectionTitle(String title, BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0), // Add padding below title
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              // color: Theme.of(context).colorScheme.secondary, // Optional: Use accent color
+            ),
+      ),
     );
   }
 
@@ -387,7 +435,7 @@ class ProductDetailPage extends StatelessWidget {
         return 'Medicamento';
       case ProductCategory.supplement:
         return 'Suplemento';
-      default: // Should not happen if enum is exhaustive
+      default:
         return 'Desconocido';
     }
   }

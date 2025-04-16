@@ -171,22 +171,18 @@ class _StoreState extends State<Store> {
               ),
             )
           else
-            GridView.builder(
+            ListView.separated(
               padding: EdgeInsets.zero,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.6, // Adjust as needed for your card layout
-                crossAxisSpacing: 15,
-                mainAxisSpacing: 15,
-              ),
               itemCount: _filteredProducts.length,
               itemBuilder: (context, index) {
-                // Use the filtered list
+                // Returns the card, which will now size itself
                 return DetailedProductCard(product: _filteredProducts[index]);
               },
+              separatorBuilder: (context, index) => const SizedBox(height: 15),
             ),
+
           const SizedBox(height: 50), // Add padding at the bottom
         ],
       ),

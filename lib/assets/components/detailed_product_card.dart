@@ -9,6 +9,9 @@ class DetailedProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -19,68 +22,70 @@ class DetailedProductCard extends StatelessWidget {
         );
       },
       child: Card(
-        elevation: 3,
+        elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
         ),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(10)),
-              child: SizedBox(
-                width: double.infinity,
-                height: 100,
-                child: FittedBox(
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
-                  child: Image.asset(
-                    product.imageUrl,
-                  ),
-                ),
+            // --- Image Section ---
+            AspectRatio(
+              aspectRatio: 16 / 10,
+              child: Image.asset(
+                product.imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey[200],
+                    child: Center(
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.grey[400],
+                        size: 40,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
-            Expanded(
-              // Use Expanded to allow the text to take the remaining space
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.commonName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+
+            // --- Text Section ---
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    product.commonName,
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 4),
-                    Expanded(
-                      // Use Expanded to allow the description to take the remaining space
-                      child: Text(
-                        product.description,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 4, // Limit the number of lines
-                      ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    product.description,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[700],
+                      height: 1.3,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '\$${product.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
+                    // maxLines: 3, // Remove or adjust if you want it fully dynamic
+                    // overflow: TextOverflow.ellipsis, // Keep ellipsis if maxLines is set
+                  ),
+                  const SizedBox(height: 12), // Add space before price
+                  Text(
+                    '\$${product.price.toStringAsFixed(2)}',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],

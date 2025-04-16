@@ -6,6 +6,8 @@ import 'package:vac/assets/data_classes/user.dart'; // Import the User class
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:vac/assets/helpers/functions.dart';
 import 'package:vac/screens/history/history.dart';
+import 'package:vac/screens/settings/settings.dart'; // Import the Settings screen
+import 'package:vac/screens/profile/edit_profile.dart'; // Import the Edit Profile screen
 
 // Placeholder for the Medical Records screen
 class MedicalRecordsScreen extends StatelessWidget {
@@ -136,8 +138,7 @@ class ProfileScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) =>
-                          const MedicalHistoryScreen()), // Use the new screen
+                      builder: (context) => const MedicalHistoryScreen()),
                 );
               },
             ),
@@ -147,19 +148,24 @@ class ProfileScreen extends StatelessWidget {
               title: const Text('Editar Perfil'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                // TODO: Navigate to an Edit Profile screen
-                Fluttertoast.showToast(
-                    msg: 'Pantalla Editar Perfil (Próximamente)');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const EditProfileScreen()),
+                );
               },
             ),
+
             ListTile(
               leading: Icon(Icons.settings_outlined, color: Colors.grey[700]),
               title: const Text('Configuración'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                // TODO: Navigate to a Settings screen
-                Fluttertoast.showToast(
-                    msg: 'Pantalla Configuración (Próximamente)');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const SettingsScreen()),
+                );
               },
             ),
 
