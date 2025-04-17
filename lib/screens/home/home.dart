@@ -258,7 +258,7 @@ class Home extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text(
-                  'Encuentra los Mejores Servicios Médicos en VAC+',
+                  'Encuentra los Mejores Servicios Médicos en Vaq+',
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

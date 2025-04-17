@@ -11,7 +11,6 @@ class ProductDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
     // Use scaffoldBackgroundColor for the content area
     final contentBackgroundColor = theme.scaffoldBackgroundColor;
 
@@ -179,10 +178,6 @@ class ProductDetailPage extends StatelessWidget {
       ),
     );
   }
-
-  // --- Section Builder Methods (No changes needed here) ---
-  // _buildMainInfoSection, _buildVaccineDetailsSection, etc. remain the same
-  // ... (Keep all your _build... methods as they were) ...
 
   /// Main Info Section: Shows price, name, common name, description
   Widget _buildMainInfoSection(BuildContext context) {

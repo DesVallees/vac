@@ -734,7 +734,7 @@ class MedicalHistory {
   // --- Firestore Deserialization ---
   factory MedicalHistory.fromJson(Map<String, dynamic> json, String docId) {
     // Helper to safely parse lists of objects
-    List<T> _parseList<T>(
+    List<T> parseList<T>(
         String key, T Function(Map<String, dynamic>) fromJson) {
       final list = json[key] as List<dynamic>?;
       if (list == null) return [];
@@ -754,21 +754,20 @@ class MedicalHistory {
     return MedicalHistory(
       patientProfileId: json['patientProfileId'] as String? ??
           '', // Should ideally always exist
-      allergies: _parseList('allergies', Allergy.fromJson),
+      allergies: parseList('allergies', Allergy.fromJson),
       pastMedicalHistory:
-          _parseList('pastMedicalHistory', MedicalCondition.fromJson),
+          parseList('pastMedicalHistory', MedicalCondition.fromJson),
       chronicConditions:
-          _parseList('chronicConditions', MedicalCondition.fromJson),
+          parseList('chronicConditions', MedicalCondition.fromJson),
       mentalHealthConditions:
-          _parseList('mentalHealthConditions', MedicalCondition.fromJson),
-      currentMedications: _parseList('currentMedications', Medication.fromJson),
-      pastMedications: _parseList('pastMedications', Medication.fromJson),
-      surgicalHistory: _parseList('surgicalHistory', Surgery.fromJson),
-      hospitalizations:
-          _parseList('hospitalizations', Hospitalization.fromJson),
+          parseList('mentalHealthConditions', MedicalCondition.fromJson),
+      currentMedications: parseList('currentMedications', Medication.fromJson),
+      pastMedications: parseList('pastMedications', Medication.fromJson),
+      surgicalHistory: parseList('surgicalHistory', Surgery.fromJson),
+      hospitalizations: parseList('hospitalizations', Hospitalization.fromJson),
       immunizationHistory:
-          _parseList('immunizationHistory', ImmunizationRecord.fromJson),
-      familyHistory: _parseList('familyHistory', FamilyMemberHistory.fromJson),
+          parseList('immunizationHistory', ImmunizationRecord.fromJson),
+      familyHistory: parseList('familyHistory', FamilyMemberHistory.fromJson),
       tobaccoUse: _enumFromString(TobaccoStatus.values,
           json['tobaccoUse'] as String?, TobaccoStatus.unknown),
       alcoholUseDetails: json['alcoholUseDetails'] as String?,

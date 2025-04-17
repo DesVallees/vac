@@ -44,7 +44,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner:
             false, // Hide 'debug' banner when running application
-        title: 'VAC+',
+        title: 'VAQ+',
         theme: ThemeData(
           useMaterial3: true,
           colorScheme:

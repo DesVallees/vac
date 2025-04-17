@@ -154,7 +154,7 @@ class One extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const IntroductionScreen(
-      title: 'VAC+',
+      title: 'VAQ+',
       imagePath: 'lib/assets/images/home_banner.png',
       subtitle: 'La Mejor Asistencia Médica',
       description: 'Obtén servicios médicos especiales para ti las 24 horas.',

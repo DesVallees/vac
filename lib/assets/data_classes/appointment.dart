@@ -39,7 +39,7 @@ class Appointment {
   final Duration duration; // Estimated duration of the appointment
   final String locationId; // ID referring to a specific clinic or location
   final String
-      locationName; // Name of the clinic/location (e.g., "VAC+ Clinic North")
+      locationName; // Name of the clinic/location (e.g., "VAQ+ Clinic North")
   final String? locationAddress; // Optional: Full address of the location
   final AppointmentType type; // The main purpose of the appointment
   final List<String>
