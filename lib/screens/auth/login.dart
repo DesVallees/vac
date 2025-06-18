@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:vac/screens/auth/signup.dart';
+import 'package:vaq/screens/auth/signup.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // --- Login Logic ---
   Future<void> _loginUser() async {
+    final theme = Theme.of(context);
     // Validate the form
     if (!_formKey.currentState!.validate()) {
       return; // If form is not valid, do nothing
@@ -71,9 +72,8 @@ class _LoginScreenState extends State<LoginScreen> {
       Fluttertoast.showToast(
           msg: message,
           toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
+          backgroundColor: theme.colorScheme.error,
+          textColor: theme.colorScheme.onError,
           fontSize: 16.0);
     } catch (e) {
       // Handle other potential errors
@@ -81,9 +81,8 @@ class _LoginScreenState extends State<LoginScreen> {
       Fluttertoast.showToast(
           msg: 'Ocurrió un error. Por favor, inténtalo de nuevo.',
           toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
+          backgroundColor: theme.colorScheme.error,
+          textColor: theme.colorScheme.onError,
           fontSize: 16.0);
     } finally {
       // Hide loading indicator only if the widget is still mounted
@@ -131,8 +130,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     'Inicia sesión para continuar',
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(color: Colors.grey[600]),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.6)),
                   ),
                   const SizedBox(height: 40),
 
@@ -192,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         _isLoading ? null : _loginUser, // Disable if loading
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: theme.colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -201,11 +200,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     child: _isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             height: 24,
                             width: 24,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: theme.colorScheme.onPrimary,
                               strokeWidth: 3,
                             ),
                           )

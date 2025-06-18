@@ -1,5 +1,5 @@
 import 'package:intl/intl.dart';
-import 'package:vac/assets/data_classes/history.dart';
+import 'package:vaq/assets/data_classes/history.dart';
 
 String formatDateTime(DateTime? date, {String format = 'dd/MM/yyyy'}) {
   if (date == null) return 'No especificado';

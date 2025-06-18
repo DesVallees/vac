@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // For date formatting
-import 'package:vac/assets/data_classes/appointment.dart';
+import 'package:vaq/assets/data_classes/appointment.dart';
 
 class AppointmentCard extends StatelessWidget {
   final Appointment appointment;
@@ -8,28 +8,42 @@ class AppointmentCard extends StatelessWidget {
   const AppointmentCard({super.key, required this.appointment});
 
   // Helper function to determine card color based on type or status
-  Color _getAppointmentColor() {
+  Color _getAppointmentColor(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     // Example logic: Customize as needed
     switch (appointment.type) {
       case AppointmentType.vaccination:
-        return Colors.teal;
+        return colorScheme.primary;
       case AppointmentType.consultation:
-        return Colors.blue;
+        return colorScheme.secondary;
       case AppointmentType.packageApplication:
-        return Colors.orange;
+        return colorScheme.primary;
       case AppointmentType.checkup:
-        return Colors.purple;
+        return colorScheme.tertiary;
       case AppointmentType.followUp:
-        return Colors.green;
+        return colorScheme.secondary;
       default:
-        return Colors.grey; // Default color
+        return colorScheme.primary; // Default color
     }
 
     // Based on status:
     // switch (appointment.status) {
-    //   case AppointmentStatus.scheduled: return Colors.blue;
-    //   case AppointmentStatus.completed: return Colors.green;
-    //   case AppointmentStatus.cancelledByUser: return Colors.red;
+    //   case AppointmentStatus.scheduled:
+    //     return colorScheme.primary;
+    //   case AppointmentStatus.completed:
+    //     return colorScheme.secondary;
+    //   case AppointmentStatus.cancelledByUser:
+    //     return colorScheme.error;
+    //   case AppointmentStatus.cancelledByClinic:
+    //     return colorScheme.error;
+    //   case AppointmentStatus.noShow:
+    //     return colorScheme.error;
+    //   case AppointmentStatus.pending:
+    //     return colorScheme.tertiary;
+    //   case AppointmentStatus.rescheduled:
+    //     return colorScheme.tertiary;
+    //   default:
+    //     return colorScheme.primary;
     // }
   }
 
@@ -59,13 +73,14 @@ class AppointmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color cardColor = _getAppointmentColor();
+    final Color cardColor = _getAppointmentColor(context);
     final String day = DateFormat('d', 'es_ES').format(appointment.dateTime);
     final String weekday = DateFormat('E', 'es_ES')
         .format(appointment.dateTime)
         .toUpperCase(); // e.g., MAR
     final String time =
         DateFormat.jm().format(appointment.dateTime); // e.g., 9:30 AM
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       padding: const EdgeInsets.all(10),
@@ -87,14 +102,14 @@ class AppointmentCard extends StatelessWidget {
               children: [
                 Text(
                   day,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 22,
-                      color: Colors.white,
+                      color: colorScheme.onPrimary,
                       fontWeight: FontWeight.bold),
                 ),
                 Text(
                   weekday,
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  style: TextStyle(color: colorScheme.onPrimary, fontSize: 12),
                 ),
               ],
             ),
@@ -113,8 +128,7 @@ class AppointmentCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  appointment.doctorName ??
-                      'Doctor No Especificado', // Use doctorName from appointment
+                  appointment.locationName,
                   style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w500), // Slightly adjusted style
@@ -123,7 +137,8 @@ class AppointmentCard extends StatelessWidget {
                 const SizedBox(height: 5),
                 Text(
                   _getAppointmentTypeText(), // Use helper for type text
-                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                  style: TextStyle(
+                      fontSize: 14, color: colorScheme.onSurfaceVariant),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

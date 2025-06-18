@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:vac/assets/components/appointment_card.dart'; // Import AppointmentCard
-import 'package:vac/assets/components/detailed_product_card.dart'; // Import DetailedProductCard
-import 'package:vac/assets/components/search_and_filter_bar.dart'; // Import reusable SearchAndFilterBar
-import 'package:vac/assets/data_classes/appointment.dart'; // Import Appointment class
-import 'package:vac/assets/data_classes/product.dart'; // Import Product class
-import 'package:vac/assets/dummy_data/appointments.dart'; // Import dummy appointments
-import 'package:vac/assets/dummy_data/products.dart'; // Import dummy products
+import 'package:vaq/assets/components/appointment_card.dart'; // Import AppointmentCard
+import 'package:vaq/assets/components/package_card.dart';
+import 'package:vaq/assets/components/search_and_filter_bar.dart'; // Import reusable SearchAndFilterBar
+import 'package:vaq/assets/data_classes/appointment.dart'; // Import Appointment class
+import 'package:vaq/assets/data_classes/product.dart'; // Import Product class
+import 'package:vaq/assets/dummy_data/appointments.dart'; // Import dummy appointments
+import 'package:vaq/assets/dummy_data/packages.dart'; // Import dummy packages
+import 'package:vaq/assets/components/article_card.dart';
+import 'package:vaq/assets/dummy_data/articles.dart';
+import 'package:vaq/assets/data_classes/article.dart';
 import 'package:provider/provider.dart'; // Import Provider
-import 'package:vac/assets/data_classes/user.dart'; // Import the User class
-import 'package:vac/screens/history/history.dart';
-import 'package:vac/screens/profile/profile.dart'; // Import the Profile screen
-import 'package:vac/screens/new_appointment/new_appointment.dart';
-import 'package:vac/screens/settings/settings.dart'; // Import the new appointment screen
+import 'package:vaq/assets/data_classes/user.dart'; // Import the User class
+import 'package:vaq/screens/history/history.dart';
+import 'package:vaq/screens/profile/profile.dart'; // Import the Profile screen
+import 'package:vaq/screens/new_appointment/new_appointment.dart';
+import 'package:vaq/screens/settings/settings.dart'; // Import the new appointment screen
 
 class Home extends StatelessWidget {
   // Callback function to navigate to the schedule page
@@ -26,14 +29,15 @@ class Home extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     // --- Data Fetching and Processing ---
-    // Get Products (Example: Fetch first 2 packages for display)
-    final ProductRepository productRepository = ProductRepository();
-    final List<Product> allProducts = productRepository.getProducts();
-    final List<Product> featuredPackages = allProducts
-        .whereType<Package>() // Filter only packages
-        .take(2) // Take the first 2 found
-        .toList();
+    // Get Packages (Vaccination Programs) – take first 2 for display
+    final VaccinationProgramRepository programRepository =
+        VaccinationProgramRepository();
+    final List<VaccinationProgram> allPrograms =
+        programRepository.getPrograms();
+    final List<VaccinationProgram> featuredPackages =
+        allPrograms.take(2).toList();
 
     // Get Appointments (Fetch, filter upcoming, sort, take top 3)
     final AppointmentRepository appointmentRepository = AppointmentRepository();
@@ -44,6 +48,11 @@ class Home extends StatelessWidget {
         .toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime)) // Sort by date
       ..take(3); // Take the first 3
+
+    // Get the three most recent articles
+    List<Article> recentArticles = [...dummyArticles]
+      ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+    recentArticles = recentArticles.take(3).toList();
 
     // --- Build Method ---
     return Padding(
@@ -74,7 +83,7 @@ class Home extends StatelessWidget {
             children: [
               _buildServiceIcon(
                 Icons.person_outline, // Icon for Profile
-                Colors.blue,
+                colorScheme.primary,
                 () {
                   Navigator.push(
                     context,
@@ -85,7 +94,7 @@ class Home extends StatelessWidget {
               ),
               _buildServiceIcon(
                 Icons.settings_outlined, // Icon for Settings
-                Colors.orange,
+                colorScheme.tertiary,
                 () {
                   Navigator.push(
                     context,
@@ -96,7 +105,7 @@ class Home extends StatelessWidget {
               ),
               _buildServiceIcon(
                 Icons.receipt_long_outlined, // Icon for Medical History
-                Colors.teal,
+                colorScheme.secondary,
                 () {
                   Navigator.push(
                     context,
@@ -107,7 +116,7 @@ class Home extends StatelessWidget {
               ),
               _buildServiceIcon(
                 Icons.add_circle_outline, // Icon for Create Appointment
-                Colors.red,
+                colorScheme.primary,
                 () {
                   Navigator.push(
                     context,
@@ -122,7 +131,7 @@ class Home extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          _buildPromotionalBanner(),
+          _buildPromotionalBanner(colorScheme),
           const SizedBox(height: 40),
 
           // Featured Products/Packages
@@ -141,7 +150,7 @@ class Home extends StatelessWidget {
               itemCount: featuredPackages.length,
               itemBuilder: (context, index) {
                 // Returns the card, which will now size itself
-                return DetailedProductCard(product: featuredPackages[index]);
+                return PackageCard(program: featuredPackages[index]);
               },
               separatorBuilder: (context, index) => const SizedBox(height: 15),
             ),
@@ -159,6 +168,27 @@ class Home extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 30),
+
+          // --- Recent Articles Section ---
+          const Text(
+            'Artículos Recientes',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 15),
+          if (recentArticles.isEmpty)
+            const Text('No hay artículos recientes disponibles.')
+          else
+            ListView.separated(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: recentArticles.length,
+              itemBuilder: (context, index) {
+                return ArticleCard(article: recentArticles[index]);
+              },
+              separatorBuilder: (context, index) => const SizedBox(height: 15),
+            ),
           const SizedBox(height: 30),
 
           // --- Appointments Section (Rewritten) ---
@@ -231,22 +261,22 @@ class Home extends StatelessWidget {
     );
   }
 
-  Widget _buildPromotionalBanner() {
+  Widget _buildPromotionalBanner(ColorScheme colorScheme) {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        boxShadow: const [
+        boxShadow: [
           // Use const
           BoxShadow(
-            color: Color.fromARGB(102, 0, 0, 0),
+            color: colorScheme.shadow.withOpacity(0.3),
             blurRadius: 9,
             offset: Offset(3, 3),
           )
         ],
         borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          // Use const
-          colors: [Colors.blueAccent, Colors.lightBlueAccent],
+        gradient: LinearGradient(
+          // Use theme colors
+          colors: [colorScheme.primary, colorScheme.primaryContainer],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -256,24 +286,25 @@ class Home extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'Encuentra los Mejores Servicios Médicos en Vaq+',
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white),
+                      color: colorScheme.onPrimary),
                 ),
                 SizedBox(height: 10),
                 Text(
                   'Te ofrecemos servicios y productos de la mejor calidad.',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: colorScheme.onPrimary),
                 ),
               ],
             ),
           ),
+          SizedBox(width: 10),
           Image.asset(
-            'lib/assets/images/home_banner.png',
+            'lib/assets/images/logo.png',
             height: 80,
           ),
         ],
@@ -296,6 +327,7 @@ class Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     // Get the current user data from the provider
     final currentUser = context.watch<User?>(); // Watch for changes
 
@@ -355,7 +387,8 @@ class Header extends StatelessWidget {
             onBackgroundImageError: (exception, stackTrace) {
               print('Error loading profile image: $exception');
             },
-            backgroundColor: Colors.grey[200], // Background for placeholder
+            backgroundColor:
+                colorScheme.surfaceContainerHigh, // Background for placeholder
           ),
         ),
       ],

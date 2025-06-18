@@ -2,7 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
-import 'package:url_launcher/url_launcher.dart'; // For opening links
+import 'package:url_launcher/url_launcher.dart';
+import 'package:vaq/screens/profile/edit_profile.dart'; // For opening links
 // Import User class if needed for context
 
 class SettingsScreen extends StatefulWidget {
@@ -30,8 +31,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (context.mounted) {
         Fluttertoast.showToast(
             msg: 'Error al cerrar sesión: $e',
-            backgroundColor: Colors.red,
-            textColor: Colors.white);
+            backgroundColor: Theme.of(context).colorScheme.error,
+            textColor: Theme.of(context).colorScheme.onError);
       }
     }
   }
@@ -67,9 +68,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('Editar Perfil'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: Navigate to Edit Profile screen
-              Fluttertoast.showToast(
-                  msg: 'Pantalla Editar Perfil (Próximamente)');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const EditProfileScreen()),
+              );
             },
           ),
           ListTile(
@@ -196,8 +199,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               label: const Text('Cerrar Sesión'),
               onPressed: () => _signOut(context),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent[100],
-                  foregroundColor: Colors.red[900],
+                  backgroundColor: Theme.of(context).colorScheme.errorContainer,
+                  foregroundColor:
+                      Theme.of(context).colorScheme.onErrorContainer,
                   minimumSize: const Size(double.infinity, 50),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12))),

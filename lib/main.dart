@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vac/screens/home/home.dart';
-import 'package:vac/screens/schedule/schedule.dart';
-import 'package:vac/screens/store/store.dart';
+import 'package:vaq/screens/home/home.dart';
+import 'package:vaq/screens/schedule/schedule.dart';
+import 'package:vaq/screens/store/store.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:vac/screens/auth/auth.dart'; // Import the AuthWrapper
-import 'package:vac/services/user_data.dart'; // Import the user data service
-import 'package:vac/assets/data_classes/user.dart'; // Import custom User class
+import 'package:vaq/screens/auth/auth.dart'; // Import the AuthWrapper
+import 'package:vaq/services/user_data.dart'; // Import the user data service
+import 'package:vaq/assets/data_classes/user.dart'; // Import custom User class
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -38,17 +38,27 @@ class MyApp extends StatelessWidget {
     // Instantiate the user data service
     final userDataService = UserDataService();
 
-    return StreamProvider<User?>.value(
-      value: userDataService.userDataStream,
-      initialData: null, // Initial data is null (no user logged in)
+    return MultiProvider(
+      providers: [
+        Provider<UserDataService>.value(value: userDataService),
+        StreamProvider<User?>.value(
+          value: userDataService.userDataStream,
+          initialData: null, // Initial data is null (no user logged in)
+        )
+      ],
       child: MaterialApp(
         debugShowCheckedModeBanner:
             false, // Hide 'debug' banner when running application
         title: 'VAQ+',
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme:
-              ColorScheme.fromSeed(seedColor: Color.fromRGBO(123, 2, 193, 1)),
+          colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF00AAB2))
+              .copyWith(
+                  primary: const Color(0xFF00AAB2),
+                  secondary: const Color(0xFF7ED321),
+                  surface: const Color(0xFFF4F6F8),
+                  onSurface: const Color(0xFF1A202C),
+                  tertiary: const Color(0xFFF5A623)),
         ),
 
         // --- Localization Configuration ---
@@ -109,7 +119,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     var mainArea = ColoredBox(
-      color: Color.fromRGBO(244, 241, 241, 1),
+      color: Theme.of(context).colorScheme.surface,
       child: Padding(
         padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
         child: AnimatedSwitcher(

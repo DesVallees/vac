@@ -1,9 +1,9 @@
 // lib/screens/schedule/schedule.dart
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart'; // Import TableCalendar specifics
-import 'package:vac/assets/components/appointment_card.dart';
-import 'package:vac/assets/data_classes/appointment.dart';
-import 'package:vac/assets/dummy_data/appointments.dart';
+import 'package:vaq/assets/components/appointment_card.dart';
+import 'package:vaq/assets/data_classes/appointment.dart';
+import 'package:vaq/assets/dummy_data/appointments.dart';
 import 'package:collection/collection.dart'; // Import for groupBy
 import 'package:intl/intl.dart'; // <-- Add this line
 
@@ -135,7 +135,9 @@ class _ScheduleState extends State<Schedule> {
                       ? 'No tienes citas programadas.'
                       : 'No hay citas programadas para esta fecha o después.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  style: TextStyle(
+                      fontSize: 16,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ),
             )
@@ -165,11 +167,11 @@ class _ScheduleState extends State<Schedule> {
       padding: const EdgeInsets.only(
           bottom: 15, left: 5, right: 5), // Adjusted padding
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
+            color: Theme.of(context).colorScheme.shadow.withOpacity(0.15),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 3),
@@ -203,14 +205,11 @@ class _ScheduleState extends State<Schedule> {
           ),
           // Style for the event markers (dots)
           markerDecoration: BoxDecoration(
-            color: Colors.redAccent, // Color of the dots
+            color: Theme.of(context).colorScheme.tertiary, // Color of the dots
             shape: BoxShape.circle,
           ),
           markersMaxCount: 1, // Show only one dot even if multiple events
           markerSize: 5.0, // Size of the dots
-          // Adjust marker position if needed
-          // markersAlignment: Alignment.bottomCenter,
-          // markersOffset: const PositionedOffset(bottom: 5),
         ),
         headerStyle: const HeaderStyle(
           formatButtonVisible: false, // Hide format button (Month/Week/2 Weeks)

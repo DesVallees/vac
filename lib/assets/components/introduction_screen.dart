@@ -25,10 +25,10 @@ class IntroductionScreen extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 30,
               fontWeight: FontWeight.w700,
-              color: Colors.teal,
+              color: Theme.of(context).colorScheme.primary,
               decoration: TextDecoration.none,
               height: 1.2,
             ),
@@ -44,10 +44,10 @@ class IntroductionScreen extends StatelessWidget {
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
               decoration: TextDecoration.none,
             ),
           ),
@@ -57,11 +57,11 @@ class IntroductionScreen extends StatelessWidget {
             child: Text(
               description,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
                 height: 1.5,
-                color: Color.fromARGB(255, 74, 74, 74),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 decoration: TextDecoration.none, // Sin subrayado
               ),
             ),

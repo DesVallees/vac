@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:vac/assets/data_classes/product.dart';
-import 'package:vac/screens/new_appointment/new_appointment.dart';
+import 'package:vaq/assets/data_classes/product.dart';
+import 'package:vaq/screens/new_appointment/new_appointment.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
+import 'package:vaq/assets/dummy_data/vaccines.dart';
+import 'package:vaq/assets/components/detailed_product_card.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
@@ -27,21 +29,23 @@ class ProductDetailPage extends StatelessWidget {
                 expandedHeight: 300.0,
                 pinned: true,
                 stretch: true,
-                backgroundColor: Colors.transparent, // Keep transparent
-                foregroundColor:
-                    Colors.white, // Keep white for contrast on image
+                backgroundColor:
+                    Theme.of(context).colorScheme.primary, // Keep transparent
+                foregroundColor: Theme.of(context)
+                    .colorScheme
+                    .onPrimary, // Use theme onPrimary for contrast on image
                 elevation: 0,
-                // Change AppBar background color ONLY when collapsed (optional, requires more complex state)
-                // surfaceTintColor: innerBoxIsScrolled ? theme.colorScheme.surface : Colors.transparent,
 
                 flexibleSpace: FlexibleSpaceBar(
                   title: Text(
                     product.commonName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.0,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      fontSize: 17.0,
                       fontWeight: FontWeight.bold,
-                      shadows: [Shadow(blurRadius: 2.0, color: Colors.black54)],
+                      shadows: const [
+                        Shadow(blurRadius: 2.0, color: Colors.black54)
+                      ],
                     ),
                   ),
                   titlePadding:
@@ -55,10 +59,17 @@ class ProductDetailPage extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
-                            color: Colors.grey[300],
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHigh,
                             child: Center(
-                              child: Icon(Icons.image_not_supported_outlined,
-                                  color: Colors.grey[500], size: 60),
+                              child: Icon(
+                                Icons.image_not_supported_outlined,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                size: 60,
+                              ),
                             ),
                           );
                         },
@@ -127,9 +138,9 @@ class ProductDetailPage extends StatelessWidget {
                           if (product is Vaccine)
                             _buildVaccineDetailsSection(
                                 context, product as Vaccine),
-                          if (product is Package)
+                          if (product is DoseBundle)
                             _buildPackageDetailsSection(
-                                context, product as Package),
+                                context, product as DoseBundle),
                           if (product is Consultation)
                             _buildConsultationDetailsSection(
                                 context, product as Consultation),
@@ -153,7 +164,7 @@ class ProductDetailPage extends StatelessWidget {
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: theme.colorScheme.primary,
-                              foregroundColor: Colors.white,
+                              foregroundColor: theme.colorScheme.onPrimary,
                               padding: const EdgeInsets.symmetric(vertical: 15),
                               textStyle: const TextStyle(
                                   fontSize: 18, fontWeight: FontWeight.bold),
@@ -187,40 +198,69 @@ class ProductDetailPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Product name
-        Text(
-          product.name,
-          style: textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-
-        // Common Name
-        Text(
-          product.commonName,
-          style: textTheme.titleMedium?.copyWith(
-            color: Colors.grey.shade700,
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Price
-        Text(
-          NumberFormat.currency(locale: 'es_CO', symbol: '\$', decimalDigits: 0)
-              .format(product.price), // Format currency
-          style: textTheme.headlineSmall?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
         const SizedBox(height: 12),
+        Row(
+          // Align items to the top if the text wraps to multiple lines
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Product name - Wrap this with Expanded
+            Expanded(
+              child: Text(
+                product.name,
+                style: textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10), // Use width for horizontal spacing
+
+            // Price - This will take up only the space it needs
+            Text(
+              NumberFormat.currency(
+                      locale: 'es_CO', symbol: '\$', decimalDigits: 0)
+                  .format(product.price), // Format currency
+              style: textTheme.headlineSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 15),
 
         // Description
         Text(
           product.description,
           style: textTheme.bodyLarge?.copyWith(height: 1.4), // Slightly larger
         ),
+
+        const SizedBox(height: 20),
+
+        // Quick appointment button for bundles
+        if (product is DoseBundle)
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      ScheduleAppointmentScreen(product: product),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              textStyle:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              minimumSize: const Size(double.infinity, 46),
+            ),
+            child: const Text('Agendar Cita'),
+          ),
       ],
     );
   }
@@ -232,40 +272,27 @@ class ProductDetailPage extends StatelessWidget {
       children: [
         _buildSectionTitle('Detalles de la Vacuna', context),
         const SizedBox(height: 12),
-        _buildDetailRow('Categoría', _getCategoryName(vaccine.category)),
-        _buildDetailRow('Fabricante', vaccine.manufacturer),
-        _buildDetailRow('Edad Mínima', '${vaccine.minAge} meses'),
-        _buildDetailRow('Edad Máxima', '${vaccine.maxAge} meses'),
         _buildDetailRow(
-            'Doctores Aplicables', vaccine.applicableDoctors.join(', ')),
-        _buildDetailRow('Dosis', vaccine.dosageInfo),
-        if (vaccine.expiryDate != null)
-          _buildDetailRow(
-            'Fecha de Expiración',
-            DateFormat.yMMMd('es_ES').format(vaccine.expiryDate!),
-          ),
-        if (vaccine.storageInstructions != null &&
-            vaccine.storageInstructions!.isNotEmpty)
-          _buildDetailRow(
-            'Almacenamiento',
-            vaccine.storageInstructions!,
-          ),
-        _buildDetailRow('Enfermedades Objetivo', vaccine.targetDiseases),
-        _buildDetailRow('Dosis y Refuerzos', vaccine.dosesAndBoosters),
+            'Categoría', _getCategoryName(vaccine.category), context),
+        _buildDetailRow('Fabricante', vaccine.manufacturer, context),
+        _buildDetailRow('Edad Mínima', '${vaccine.minAge} meses', context),
+        _buildDetailRow('Edad Máxima', '${vaccine.maxAge} meses', context),
+        _buildDetailRow('Doctores Aplicables',
+            vaccine.applicableDoctors.join(', '), context),
+        _buildDetailRow('Dosis', vaccine.dosageInfo, context),
+        _buildDetailRow(
+            'Enfermedades Objetivo', vaccine.targetDiseases, context),
+        _buildDetailRow('Dosis y Refuerzos', vaccine.dosesAndBoosters, context),
         if (vaccine.contraindications != null &&
             vaccine.contraindications!.isNotEmpty)
           _buildDetailRow(
-            'Contraindicaciones',
-            vaccine.contraindications!,
-          ),
+              'Contraindicaciones', vaccine.contraindications!, context),
         if (vaccine.precautions != null && vaccine.precautions!.isNotEmpty)
-          _buildDetailRow('Precauciones', vaccine.precautions!),
+          _buildDetailRow('Precauciones', vaccine.precautions!, context),
         if (vaccine.specialIndications != null &&
             vaccine.specialIndications!.isNotEmpty)
           _buildDetailRow(
-            'Indicaciones Especiales',
-            vaccine.specialIndications!,
-          ),
+              'Indicaciones Especiales', vaccine.specialIndications!, context),
         const SizedBox(height: 16),
         const Divider(), // Add divider after section
         const SizedBox(height: 16),
@@ -274,11 +301,20 @@ class ProductDetailPage extends StatelessWidget {
   }
 
   /// Details Section specific to Packages
-  Widget _buildPackageDetailsSection(BuildContext context, Package package) {
-    // TODO: Fetch product names for includedProductIds for better display
-    String includedItemsText = package.includedProductIds.isNotEmpty
-        ? 'IDs: ${package.includedProductIds.join(', ')}' // Simple display for now
-        : 'Ninguno especificado';
+  /// Shows a card for each vaccine included instead of raw IDs.
+  Widget _buildPackageDetailsSection(BuildContext context, DoseBundle package) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
+    // Fetch full product objects based on IDs
+    final repo = ProductRepository();
+    final allProducts = repo.getProducts();
+    final includedProducts = package.includedProductIds
+        .map((id) => allProducts.firstWhere(
+              (p) => p.id == id,
+            ))
+        .whereType<Product>()
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,20 +323,32 @@ class ProductDetailPage extends StatelessWidget {
         const SizedBox(height: 12),
         if (package.targetMilestone != null &&
             package.targetMilestone!.isNotEmpty)
-          _buildDetailRow('Etapa Objetivo', package.targetMilestone!),
-        _buildDetailRow('Edad Mínima', '${package.minAge} meses'),
-        _buildDetailRow('Edad Máxima', '${package.maxAge} meses'),
-        _buildDetailRow(
-            'Doctores Aplicables', package.applicableDoctors.join(', ')),
-        _buildDetailRow('Productos Incluidos', includedItemsText),
-        if (package.specialIndications != null &&
-            package.specialIndications!.isNotEmpty)
-          _buildDetailRow(
-            'Indicaciones Especiales',
-            package.specialIndications!,
-          ),
+          _buildDetailRow('Etapa Objetivo', package.targetMilestone!, context),
+        _buildDetailRow('Edad Mínima', '${package.minAge} meses', context),
+        _buildDetailRow('Edad Máxima', '${package.maxAge} meses', context),
+        _buildDetailRow('Doctores Aplicables',
+            package.applicableDoctors.join(', '), context),
         const SizedBox(height: 16),
-        const Divider(), // Add divider after section
+        // --- Included products cards ---
+        Text(
+          'Productos Incluidos',
+          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        ...includedProducts.map(
+          (prod) => Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: DetailedProductCard(product: prod),
+          ),
+        ),
+        if (package.specialIndications != null &&
+            package.specialIndications!.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildDetailRow(
+              'Indicaciones Especiales', package.specialIndications!, context),
+        ],
+        const SizedBox(height: 16),
+        const Divider(),
         const SizedBox(height: 16),
       ],
     );
@@ -316,23 +364,19 @@ class ProductDetailPage extends StatelessWidget {
       children: [
         _buildSectionTitle('Detalles de la Consulta', context),
         const SizedBox(height: 12),
-        _buildDetailRow('Duración Típica', durationText),
-        _buildDetailRow('Edad Mínima', '${consultation.minAge} meses'),
-        _buildDetailRow('Edad Máxima', '${consultation.maxAge} meses'),
-        _buildDetailRow(
-            'Doctores Aplicables', consultation.applicableDoctors.join(', ')),
+        _buildDetailRow('Duración Típica', durationText, context),
+        _buildDetailRow('Edad Mínima', '${consultation.minAge} meses', context),
+        _buildDetailRow('Edad Máxima', '${consultation.maxAge} meses', context),
+        _buildDetailRow('Doctores Aplicables',
+            consultation.applicableDoctors.join(', '), context),
         if (consultation.preparationNotes != null &&
             consultation.preparationNotes!.isNotEmpty)
           _buildDetailRow(
-            'Notas de Preparación',
-            consultation.preparationNotes!,
-          ),
+              'Notas de Preparación', consultation.preparationNotes!, context),
         if (consultation.specialIndications != null &&
             consultation.specialIndications!.isNotEmpty)
-          _buildDetailRow(
-            'Indicaciones Especiales',
-            consultation.specialIndications!,
-          ),
+          _buildDetailRow('Indicaciones Especiales',
+              consultation.specialIndications!, context),
         const SizedBox(height: 16),
         const Divider(), // Add divider after section
         const SizedBox(height: 16),
@@ -360,20 +404,14 @@ class ProductDetailPage extends StatelessWidget {
         _buildSectionTitle('Precios Alternativos', context),
         const SizedBox(height: 12),
         if (product.priceAvacunar != null)
-          _buildDetailRow(
-            'Precio Avacunar',
-            currencyFormat.format(product.priceAvacunar!),
-          ),
+          _buildDetailRow('Precio Avacunar',
+              currencyFormat.format(product.priceAvacunar!), context),
         if (product.priceVita != null)
-          _buildDetailRow(
-            'Precio Vita',
-            currencyFormat.format(product.priceVita!),
-          ),
+          _buildDetailRow('Precio Vita',
+              currencyFormat.format(product.priceVita!), context),
         if (product.priceColsanitas != null)
-          _buildDetailRow(
-            'Precio Colsanitas',
-            currencyFormat.format(product.priceColsanitas!),
-          ),
+          _buildDetailRow('Precio Colsanitas',
+              currencyFormat.format(product.priceColsanitas!), context),
         const SizedBox(height: 16),
         const Divider(), // Add divider after section
         const SizedBox(height: 16),
@@ -383,23 +421,25 @@ class ProductDetailPage extends StatelessWidget {
 
   // --- Helper Widgets ---
 
-  /// Helper to build a detail row with label & value
-  Widget _buildDetailRow(String label, String value) {
+  /// Helper to build a detail row with label & value (vertical layout)
+  Widget _buildDetailRow(String label, String value, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$label: ',
+            '$label:',
             style: const TextStyle(
                 fontWeight: FontWeight.w600, // Slightly bolder label
                 fontSize: 15),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(fontSize: 15, color: Colors.grey.shade800),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 15,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],

@@ -1,6 +1,6 @@
 // dummy_data/history.dart
 
-import 'package:vac/assets/data_classes/history.dart'; // Adjust the import path if necessary
+import 'package:vaq/assets/data_classes/history.dart'; // Adjust the import path if necessary
 import 'package:uuid/uuid.dart'; // Import Uuid if you need to generate IDs dynamically elsewhere, though here we hardcode them for consistency
 
 final String _dummyPatientProfileId =

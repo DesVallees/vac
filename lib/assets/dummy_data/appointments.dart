@@ -1,5 +1,5 @@
 import 'package:uuid/uuid.dart';
-import 'package:vac/assets/data_classes/appointment.dart';
+import 'package:vaq/assets/data_classes/appointment.dart';
 
 class AppointmentRepository {
   static final List<Appointment> _appointments = [

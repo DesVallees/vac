@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vac/assets/data_classes/user.dart';
+import 'package:vaq/assets/data_classes/user.dart';
 
 // Import main app screen, login screen, and introduction screen
-import 'package:vac/main.dart'; // Contains MyHomePage
-import 'package:vac/screens/auth/login.dart'; // Login Screen
-import 'package:vac/screens/landing/introduction.dart'; // Introduction Screen
+import 'package:vaq/main.dart'; // Contains MyHomePage
+import 'package:vaq/screens/auth/login.dart'; // Login Screen
+import 'package:vaq/screens/landing/introduction.dart'; // Introduction Screen
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});

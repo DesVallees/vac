@@ -6,15 +6,15 @@ class Calendar extends StatelessWidget {
   Widget build(BuildContext context) {
     return TableCalendar(
       firstDay: DateTime.utc(2020, 1, 1),
-      lastDay: DateTime.utc(2030, 12, 31),
+      lastDay: DateTime.now().add(const Duration(days: 365)),
       focusedDay: DateTime.now(),
-      calendarStyle: const CalendarStyle(
+      calendarStyle: CalendarStyle(
         todayDecoration: BoxDecoration(
-          color: Colors.blueAccent,
+          color: Theme.of(context).colorScheme.primary,
           shape: BoxShape.circle,
         ),
         selectedDecoration: BoxDecoration(
-          color: Colors.deepOrange,
+          color: Theme.of(context).colorScheme.secondary,
           shape: BoxShape.circle,
         ),
       ),

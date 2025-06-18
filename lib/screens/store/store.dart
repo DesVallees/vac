@@ -1,10 +1,12 @@
 // lib/screens/store/store.dart
 import 'package:flutter/material.dart';
-import 'package:vac/assets/components/detailed_product_card.dart';
-import 'package:vac/assets/dummy_data/products.dart';
-import 'package:vac/assets/data_classes/filter_options.dart';
-import 'package:vac/assets/data_classes/product.dart';
-import 'package:vac/assets/components/search_and_filter_bar.dart'; // Import the new widget
+import 'package:vaq/assets/components/detailed_product_card.dart';
+import 'package:vaq/assets/components/package_card.dart';
+import 'package:vaq/assets/components/search_and_filter_bar.dart';
+import 'package:vaq/assets/data_classes/filter_options.dart';
+import 'package:vaq/assets/data_classes/product.dart';
+import 'package:vaq/assets/dummy_data/vaccines.dart';
+import 'package:vaq/assets/dummy_data/packages.dart';
 
 class Store extends StatefulWidget {
   const Store({super.key});
@@ -14,14 +16,24 @@ class Store extends StatefulWidget {
 }
 
 class _StoreState extends State<Store> {
-  final ProductRepository productRepository = ProductRepository();
-  late List<Product> _allProducts;
-  List<Product> _filteredProducts = []; // List to display
+  // ───────────────────────────────────────────────── repositories ─────────────
+  final ProductRepository _productRepo = ProductRepository();
+  final VaccinationProgramRepository _programRepo =
+      VaccinationProgramRepository();
 
+  // original data
+  late final List<Vaccine> _allVaccines;
+  late final List<VaccinationProgram> _allPrograms;
+
+  // filtered data
+  List<Vaccine> _filteredVaccines = [];
+  List<VaccinationProgram> _filteredPrograms = [];
+
+  // search & filter state
   String _searchTerm = '';
-  Map<String, dynamic> _activeFilters = {};
+  late Map<String, dynamic> _activeFilters;
 
-  // Define the filters available for the Store screen
+  // filter configuration for the SearchAndFilterBar
   final List<FilterOption> _storeFilters = [
     FilterOption(
       id: 'productType',
@@ -29,162 +41,181 @@ class _StoreState extends State<Store> {
       type: FilterType.checkboxes,
       options: [
         {'label': 'Vacuna', 'value': 'vaccine'},
-        {'label': 'Paquete', 'value': 'package'},
-        {'label': 'Consulta', 'value': 'consultation'},
+        {'label': 'Programa', 'value': 'program'},
       ],
-      initialValue: [], // Initially select none
+      initialValue: <String>[],
     ),
     FilterOption(
       id: 'priceRange',
       label: 'Rango de Precio',
       type: FilterType.rangeSlider,
-      rangeLimits: const RangeValues(0, 200000), // Example limits
-      initialValue: const RangeValues(0, 200000), // Initially full range
+      rangeLimits: const RangeValues(0, 700000),
+      initialValue: const RangeValues(0, 700000),
     ),
     FilterOption(
       id: 'ageRange',
-      label: 'Rango de Edad (Meses)', // Assuming age is in months
+      label: 'Rango de Edad (Meses)',
       type: FilterType.rangeSlider,
-      rangeLimits:
-          const RangeValues(0, 216), // 0 months to 18 years (216 months)
-      initialValue: const RangeValues(0, 216), // Initially full range
+      rangeLimits: const RangeValues(0, 216),
+      initialValue: const RangeValues(0, 216),
     ),
-    // Add more filters as needed (e.g., manufacturer, target disease for vaccines)
   ];
 
+  // ────────────────────────────────────────────────── lifecycle ───────────────
   @override
   void initState() {
     super.initState();
-    _allProducts = productRepository.getProducts();
-    // Initialize filters with default values
-    _activeFilters = {
-      for (var filter in _storeFilters) filter.id: filter.initialValue
-    };
-    _applyFilters(); // Apply initial filters (which might be none)
+    _allVaccines = _productRepo.getProducts().whereType<Vaccine>().toList();
+    _allPrograms = _programRepo.getPrograms();
+
+    _activeFilters = {for (final f in _storeFilters) f.id: f.initialValue};
+    _applyFilters();
   }
 
+  // ─────────────────────────────────────────────── handlers ────────────────────
   void _updateSearchTerm(String term) {
-    setState(() {
-      _searchTerm = term;
-      _applyFilters();
-    });
+    _searchTerm = term;
+    _applyFilters();
   }
 
   void _updateFilters(Map<String, dynamic> newFilters) {
-    setState(() {
-      _activeFilters = newFilters;
-      _applyFilters();
-    });
+    _activeFilters = newFilters;
+    _applyFilters();
   }
 
+  // ─────────────────────────────────────────── filtering logic ────────────────
   void _applyFilters() {
-    _filteredProducts = _allProducts.where((product) {
-      // 1. Filter by Search Term (case-insensitive)
-      final searchTermLower = _searchTerm.toLowerCase();
-      final matchesSearch = searchTermLower.isEmpty ||
-          product.name.toLowerCase().contains(searchTermLower) ||
-          product.commonName.toLowerCase().contains(searchTermLower) ||
-          product.description.toLowerCase().contains(searchTermLower) ||
-          (product is Vaccine &&
-              product.targetDiseases.toLowerCase().contains(searchTermLower)) ||
-          (product is Vaccine &&
-              product.manufacturer.toLowerCase().contains(searchTermLower));
+    final q = _searchTerm.toLowerCase();
 
+    bool _typeSelected(String v) {
+      final selected = _activeFilters['productType'] as List<dynamic>;
+      return selected.isEmpty || selected.contains(v);
+    }
+
+    // vaccines
+    _filteredVaccines = _allVaccines.where((v) {
+      final matchesSearch = q.isEmpty ||
+          v.name.toLowerCase().contains(q) ||
+          v.commonName.toLowerCase().contains(q) ||
+          v.description.toLowerCase().contains(q) ||
+          v.targetDiseases.toLowerCase().contains(q) ||
+          v.manufacturer.toLowerCase().contains(q);
       if (!matchesSearch) return false;
 
-      // 2. Filter by Active Filters
-      bool matchesFilters = true;
-      _activeFilters.forEach((filterId, value) {
-        switch (filterId) {
-          case 'productType':
-            List<dynamic> selectedTypes = value as List<dynamic>;
-            if (selectedTypes.isNotEmpty) {
-              bool typeMatch = false;
-              if (selectedTypes.contains('vaccine') && product is Vaccine) {
-                typeMatch = true;
-              }
-              if (selectedTypes.contains('package') && product is Package) {
-                typeMatch = true;
-              }
-              if (selectedTypes.contains('consultation') &&
-                  product is Consultation) typeMatch = true;
-              if (!typeMatch) matchesFilters = false;
-            }
+      if (!_typeSelected('vaccine')) return false;
 
-          case 'priceRange':
-            RangeValues range = value as RangeValues;
-            if (product.price < range.start || product.price > range.end) {
-              matchesFilters = false;
-            }
+      final price = _activeFilters['priceRange'] as RangeValues;
+      if (v.price != null) {
+        if (v.price! < price.start || v.price! > price.end) return false;
+      }
 
-          case 'ageRange':
-            RangeValues ageRange = value as RangeValues;
-            // Assuming minAge/maxAge are in months
-            if (product.minAge > ageRange.end ||
-                product.maxAge < ageRange.start) {
-              // If the product's age range is completely outside the filter range
-              matchesFilters = false;
-            }
-        }
-      });
+      final age = _activeFilters['ageRange'] as RangeValues;
+      if (v.minAge > age.end || v.maxAge < age.start) return false;
 
-      return matchesFilters; // Must match both search and filters
+      return true;
     }).toList();
+
+    // programs
+    _filteredPrograms = _allPrograms.where((p) {
+      final matchesSearch = q.isEmpty ||
+          p.name.toLowerCase().contains(q) ||
+          p.commonName.toLowerCase().contains(q) ||
+          p.description.toLowerCase().contains(q);
+      if (!matchesSearch) return false;
+
+      if (!_typeSelected('program')) return false;
+
+      final age = _activeFilters['ageRange'] as RangeValues;
+      if (p.minAge > age.end || p.maxAge < age.start) return false;
+
+      return true;
+    }).toList();
+
+    setState(() {});
   }
 
+  // ───────────────────────────────────────────────────── UI ────────────────────
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 30),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Tienda',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Tienda',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+
+            // search & filters
+            SearchAndFilterBar(
+              onSearchChanged: _updateSearchTerm,
+              onFiltersChanged: _updateFilters,
+              availableFilters: _storeFilters,
+              initialFilters: _activeFilters,
+              initialSearchText: _searchTerm,
             ),
-          ),
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-          // Use the new SearchAndFilterBar
-          SearchAndFilterBar(
-            onSearchChanged: _updateSearchTerm,
-            onFiltersChanged: _updateFilters,
-            availableFilters: _storeFilters,
-            initialFilters: _activeFilters,
-            initialSearchText: _searchTerm,
-          ),
-          const SizedBox(height: 20),
+            // ────────── programs section ──────────
+            Text('Programas de Vacunación',
+                style: Theme.of(context).textTheme.titleLarge),
+            _filteredPrograms.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 40),
+                    child: Center(
+                      child: Text(
+                        'No hay programas que coincidan con tu búsqueda o filtros.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _filteredPrograms.length,
+                    itemBuilder: (_, i) =>
+                        PackageCard(program: _filteredPrograms[i]),
+                    separatorBuilder: (_, __) => const SizedBox(height: 15),
+                  ),
 
-          // Display filtered results
-          if (_filteredProducts.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 40.0),
-              child: Center(
-                child: Text(
-                  'No se encontraron productos que coincidan con tu búsqueda o filtros.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                ),
-              ),
-            )
-          else
-            ListView.separated(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _filteredProducts.length,
-              itemBuilder: (context, index) {
-                // Returns the card, which will now size itself
-                return DetailedProductCard(product: _filteredProducts[index]);
-              },
-              separatorBuilder: (context, index) => const SizedBox(height: 15),
-            ),
+            const SizedBox(height: 30),
 
-          const SizedBox(height: 50), // Add padding at the bottom
-        ],
+            // ────────── vaccines section ──────────
+            Text('Vacunas individuales',
+                style: Theme.of(context).textTheme.titleLarge),
+            _filteredVaccines.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 40),
+                    child: Center(
+                      child: Text(
+                        'No se encontraron vacunas que coincidan con tu búsqueda o filtros.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _filteredVaccines.length,
+                    itemBuilder: (_, i) =>
+                        DetailedProductCard(product: _filteredVaccines[i]),
+                    separatorBuilder: (_, __) => const SizedBox(height: 15),
+                  ),
+
+            const SizedBox(height: 50),
+          ],
+        ),
       ),
     );
   }

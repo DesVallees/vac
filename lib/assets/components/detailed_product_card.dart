@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:vac/assets/data_classes/product.dart';
-import 'package:vac/screens/product/product.dart';
+import 'package:vaq/assets/data_classes/product.dart';
+import 'package:vaq/screens/product/product.dart';
 
 class DetailedProductCard extends StatelessWidget {
   final Product product;
@@ -39,11 +39,12 @@ class DetailedProductCard extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
-                    color: Colors.grey[200],
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     child: Center(
                       child: Icon(
                         Icons.broken_image_outlined,
-                        color: Colors.grey[400],
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         size: 40,
                       ),
                     ),
@@ -71,7 +72,7 @@ class DetailedProductCard extends StatelessWidget {
                   Text(
                     product.description,
                     style: textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[700],
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       height: 1.3,
                     ),
                     // maxLines: 3, // Remove or adjust if you want it fully dynamic
@@ -79,7 +80,7 @@ class DetailedProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 12), // Add space before price
                   Text(
-                    '\$${product.price.toStringAsFixed(2)}',
+                    '\$${product.price?.toStringAsFixed(2)}',
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.primary,

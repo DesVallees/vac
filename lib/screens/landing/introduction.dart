@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:vac/assets/components/introduction_screen.dart';
+import 'package:vaq/assets/components/introduction_screen.dart';
 
 class Introduction extends StatefulWidget {
   final VoidCallback? onDone;
@@ -14,22 +14,10 @@ class Introduction extends StatefulWidget {
 class _IntroductionState extends State<Introduction> {
   final PageController _controller = PageController(); // Make final
   bool isLastPage = false;
-  Color _backgroundColor = const Color.fromRGBO(240, 248, 255, 1.0);
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(() {
-      if (_controller.page != null) {
-        int currentPage = _controller.page!.round();
-        // Check mounted before calling setState in listener
-        if (mounted) {
-          setState(() {
-            _backgroundColor = _getBackgroundColor(currentPage);
-          });
-        }
-      }
-    });
   }
 
   // --- Function to call when intro is finished/skipped ---
@@ -40,27 +28,10 @@ class _IntroductionState extends State<Introduction> {
     // which will then show either LoginScreen or MyHomePage based on auth state.
   }
 
-  Color _getBackgroundColor(int index) {
-    switch (index) {
-      case 0:
-        return const Color.fromRGBO(240, 248, 255, 1.0);
-      case 1:
-        return const Color.fromRGBO(255, 239, 213, 1.0);
-      case 2:
-        return const Color.fromRGBO(245, 245, 220, 1.0);
-      case 3:
-        return const Color.fromRGBO(240, 255, 240, 1.0);
-      case 4:
-        return const Color.fromRGBO(255, 250, 240, 1.0);
-      default:
-        return const Color.fromRGBO(240, 248, 255, 1.0);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _backgroundColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -77,9 +48,9 @@ class _IntroductionState extends State<Introduction> {
                         // Call the finish function when skipping
                         _finishIntroduction(context);
                       },
-                      child: const Text('Omitir',
+                      child: Text('Omitir',
                           style: TextStyle(
-                            color: Color.fromARGB(153, 71, 0, 150),
+                            color: Theme.of(context).colorScheme.primary,
                           )),
                     ),
                   ],
@@ -90,7 +61,6 @@ class _IntroductionState extends State<Introduction> {
                     onPageChanged: (value) {
                       setState(() {
                         isLastPage = value == 4;
-                        _backgroundColor = _getBackgroundColor(value);
                       });
                     },
                     children: const [

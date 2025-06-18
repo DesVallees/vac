@@ -1,7 +1,8 @@
 // lib/services/user_data.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
-import 'package:vac/assets/data_classes/user.dart'; // Your User class import
+import 'dart:async';
+import 'package:vaq/assets/data_classes/user.dart'; // Your User class import
 
 class UserDataService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -9,27 +10,47 @@ class UserDataService {
 
   // Stream to listen for user data changes
   Stream<User?> get userDataStream {
-    return _auth.authStateChanges().asyncMap((fbUser) async {
-      if (fbUser == null) {
-        return null; // No Firebase user logged in
-      }
-      try {
-        final docSnapshot =
-            await _firestore.collection('users').doc(fbUser.uid).get();
-        if (docSnapshot.exists) {
-          // Use the factory constructor from your User class
-          return User.fromFirestore(docSnapshot);
+    // We expose a broadcast stream so multiple listeners can subscribe.
+    final controller = StreamController<User?>.broadcast();
+
+    // Subscriptions we may need to cancel when auth changes or when the
+    // controller itself is canceled.
+    StreamSubscription<fb_auth.User?>? authSub;
+    StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? docSub;
+
+    // Listen for authentication changes.
+    authSub = _auth.authStateChanges().listen(
+      (fbUser) {
+        // If we were already listening to a user document, stop now.
+        docSub?.cancel();
+        docSub = null;
+
+        if (fbUser == null) {
+          // User signed out – emit null.
+          controller.add(null);
         } else {
-          print(
-              "User document doesn't exist for uid: ${fbUser.uid}. This might happen during initial sign-up before document creation.");
-          // Optionally create a default user document here if needed
-          return null; // Or return a default User object if appropriate
+          // Start listening to the current user's document.
+          docSub =
+              _firestore.collection('users').doc(fbUser.uid).snapshots().listen(
+            (docSnap) {
+              controller
+                  .add(docSnap.exists ? User.fromFirestore(docSnap) : null);
+            },
+            onError: controller.addError,
+          );
         }
-      } catch (e) {
-        print('Error fetching user data: $e');
-        return null; // Return null on error
-      }
-    });
+      },
+      onError: controller.addError,
+      onDone: controller.close,
+    );
+
+    // Clean‑up logic when no one is listening anymore.
+    controller.onCancel = () async {
+      await authSub?.cancel();
+      await docSub?.cancel();
+    };
+
+    return controller.stream;
   }
 
   // --- NEW METHOD: Update User Data ---

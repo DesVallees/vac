@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart'; // For generating unique IDs
 
-import 'package:vac/assets/data_classes/product.dart';
-import 'package:vac/assets/data_classes/user.dart';
-import 'package:vac/assets/data_classes/appointment.dart';
-import 'package:vac/assets/dummy_data/pediatricians.dart';
-import 'package:vac/assets/dummy_data/appointments.dart';
-import 'package:vac/assets/dummy_data/products.dart'; // Import product repository/data
+import 'package:vaq/assets/data_classes/product.dart';
+import 'package:vaq/assets/data_classes/appointment.dart';
+import 'package:vaq/assets/data_classes/location.dart';
+import 'package:vaq/assets/dummy_data/location.dart';
+import 'package:vaq/assets/dummy_data/appointments.dart';
+import 'package:vaq/assets/dummy_data/vaccines.dart'; // Import product repository/data
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:vaq/assets/helpers/holidays.dart';
 
 class ScheduleAppointmentScreen extends StatefulWidget {
   // Make product optional
@@ -26,10 +27,10 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
   // State variables
   Product?
       _selectedProduct; // Holds the product being scheduled (either initial or selected)
-  Pediatrician? _selectedPediatrician;
+  Location? _selectedLocation;
   DateTime? _selectedDate;
   DateTime? _selectedTimeSlot; // Store the full DateTime of the slot
-  List<Pediatrician> _availablePediatricians = [];
+  List<Location> _availableLocations = [];
   List<DateTime> _availableTimeSlots = [];
   List<Consultation> _availableConsultations = []; // List for product selection
   bool _isLoading = false;
@@ -37,8 +38,6 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
       false; // Flag to know if we need to select a product
 
   // Repositories
-  final PediatriciansRepository _pediatriciansRepository =
-      PediatriciansRepository();
   final AppointmentRepository _appointmentRepository = AppointmentRepository();
   final ProductRepository _productRepository =
       ProductRepository(); // Add product repository
@@ -52,7 +51,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
     if (_isProductSelectionMode) {
       _loadAvailableConsultations(); // Load consultations if no product was passed
     } else {
-      _loadAvailablePediatricians(); // Load pediatricians if a product was passed
+      _loadAvailableLocations(); // Load locations if a product was passed
     }
   }
 
@@ -62,47 +61,22 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
     setState(() {
       _availableConsultations = allProducts.whereType<Consultation>().toList();
       // Reset other selections when entering product selection mode
-      _selectedPediatrician = null;
+      _selectedLocation = null;
       _selectedDate = null;
       _selectedTimeSlot = null;
-      _availablePediatricians = [];
+      _availableLocations = [];
       _availableTimeSlots = [];
     });
   }
 
-  // Load pediatricians based on the _selectedProduct
-  void _loadAvailablePediatricians() {
-    // Ensure a product is selected before loading pediatricians
-    if (_selectedProduct == null) {
-      setState(() {
-        _availablePediatricians = []; // Clear list if no product
-        _selectedPediatrician = null; // Reset selection
-      });
-      return;
-    }
-
-    final allPediatricians = _pediatriciansRepository.getPediatricians();
+  // Load locations based on the _selectedProduct
+  void _loadAvailableLocations() {
     setState(() {
-      _availablePediatricians = allPediatricians
-          .where((ped) =>
-              _selectedProduct!.applicableDoctors.contains(ped.specialty))
-          .toList();
-
-      // Reset pediatrician selection if the previously selected one is no longer valid
-      if (_selectedPediatrician != null &&
-          !_availablePediatricians.contains(_selectedPediatrician)) {
-        _selectedPediatrician = null;
-      }
-      // Auto-select if only one is available
-      else if (_availablePediatricians.length == 1) {
-        _selectedPediatrician = _availablePediatricians.first;
-      }
-
-      // Also update time slots if date was already selected
-      _availableTimeSlots =
-          _generateAvailableTimeSlots(_selectedDate, _selectedPediatrician);
-      // Reset time slot if pediatrician changed
+      _availableLocations = dummyLocations;
+      _selectedLocation = null;
+      _selectedDate = null;
       _selectedTimeSlot = null;
+      _availableTimeSlots = [];
     });
   }
 
@@ -111,43 +85,57 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
   Future<void> _selectDate(BuildContext context) async {
     final today = DateTime.now();
     final startOfToday = DateTime(today.year, today.month, today.day);
+    final holidays = ColombianHolidays.getHolidays(year: today.year);
 
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? today,
-      firstDate: startOfToday, // Can't select past dates
-      lastDate: today.add(const Duration(days: 180)), // Limit to 6 months ahead
-      locale: const Locale('es', 'ES'), // Use Spanish locale
+      firstDate: startOfToday,
+      lastDate: today.add(const Duration(days: 180)),
+      locale: const Locale('es', 'ES'),
+      selectableDayPredicate: (date) {
+        // Only Monday–Friday and not a holiday
+        if (date.weekday < DateTime.monday || date.weekday > DateTime.friday) {
+          return false;
+        }
+        final normalized = DateTime.utc(date.year, date.month, date.day);
+        return !holidays.contains(normalized);
+      },
     );
+
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
-        _selectedTimeSlot = null; // Reset time slot when date changes
+        _selectedTimeSlot = null;
         _availableTimeSlots =
-            _generateAvailableTimeSlots(picked, _selectedPediatrician);
+            _generateAvailableTimeSlots(picked, _selectedLocation);
       });
     }
   }
 
   // SIMULATED time slots - Replace with real availability logic later
   List<DateTime> _generateAvailableTimeSlots(
-      DateTime? date, Pediatrician? doctor) {
-    if (date == null || doctor == null) {
-      return []; // No slots if date or doctor isn't selected
+      DateTime? date, Location? location) {
+    if (date == null || location == null) {
+      return []; // No slots if date or location isn't selected
     }
 
     List<DateTime> slots = [];
-    // Example: Generate slots from 9 AM to 5 PM, every 30 minutes
+    // Example: Generate slots from 9 AM to 6 PM (exclusive), every 30 minutes
     DateTime startTime =
         DateTime(date.year, date.month, date.day, 9, 0); // 9:00 AM
     DateTime endTime =
-        DateTime(date.year, date.month, date.day, 17, 0); // 5:00 PM
+        DateTime(date.year, date.month, date.day, 18, 0); // 6:00 PM (exclusive)
 
-    // TODO: Get actual booked appointments for this doctor on this date
-    // final bookedSlots = _appointmentRepository.getAppointmentsForDoctorOnDate(doctor.id, date);
+    // TODO: Get actual booked appointments for this location on this date
     final bookedSlots = <DateTime>[]; // Placeholder
 
     while (startTime.isBefore(endTime)) {
+      // Skip 13:00 and 13:30
+      if (startTime.hour == 13) {
+        startTime = startTime.add(const Duration(minutes: 30));
+        continue;
+      }
       // Basic check: Don't add slots in the past (if selected date is today)
       final now = DateTime.now();
       if (startTime.isAfter(now)) {
@@ -180,24 +168,24 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
     if (product != null && product != _selectedProduct) {
       setState(() {
         _selectedProduct = product;
-        // Reset subsequent selections and load pediatricians for the new product
-        _selectedPediatrician = null;
-        _selectedDate = null; // Optionally keep date? Resetting is safer.
+        // Reset subsequent selections and load locations for the new product
+        _selectedLocation = null;
+        _selectedDate = null;
         _selectedTimeSlot = null;
-        _availablePediatricians = [];
+        _availableLocations = [];
         _availableTimeSlots = [];
-        _loadAvailablePediatricians(); // Load pediatricians for the newly selected product
+        _loadAvailableLocations(); // Load locations for the newly selected product
       });
     }
   }
 
-  void _onPediatricianSelected(Pediatrician? pediatrician) {
-    if (pediatrician != _selectedPediatrician) {
+  void _onLocationSelected(Location? location) {
+    if (location != _selectedLocation) {
       setState(() {
-        _selectedPediatrician = pediatrician;
-        _selectedTimeSlot = null; // Reset time slot when doctor changes
+        _selectedLocation = location;
+        _selectedTimeSlot = null;
         _availableTimeSlots =
-            _generateAvailableTimeSlots(_selectedDate, pediatrician);
+            _generateAvailableTimeSlots(_selectedDate, location);
       });
     }
   }
@@ -206,13 +194,13 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
   Future<void> _submitAppointment() async {
     // Add check for _selectedProduct
     if (_selectedProduct == null ||
-        _selectedPediatrician == null ||
+        _selectedLocation == null ||
         _selectedDate == null ||
         _selectedTimeSlot == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Por favor completa todos los campos.'),
-            backgroundColor: Colors.orange),
+        SnackBar(
+            content: const Text('Por favor completa todos los campos.'),
+            backgroundColor: Theme.of(context).colorScheme.tertiary),
       );
       return;
     }
@@ -229,7 +217,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
       if (_selectedProduct! is Consultation) {
         apptType = AppointmentType.consultation;
         duration = (_selectedProduct! as Consultation).typicalDuration;
-      } else if (_selectedProduct! is Package) {
+      } else if (_selectedProduct! is DoseBundle) {
         apptType = AppointmentType.packageApplication;
         duration = const Duration(minutes: 45); // Example duration
       } else {
@@ -242,17 +230,14 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
         id: const Uuid().v4(), // Generate unique ID
         patientId: 'current_patient_id', // TODO: Get actual patient ID
         patientName: 'Paciente Ejemplo', // TODO: Get actual patient name
-        doctorId: _selectedPediatrician!.id,
-        doctorName: _selectedPediatrician!.displayName,
-        doctorSpecialty: _selectedPediatrician!.specialty,
+        doctorId: 'placeholder_doctor_id',
+        doctorName: null,
+        doctorSpecialty: null,
         dateTime: _selectedTimeSlot!, // Use the selected time slot
         duration: duration,
-        locationId: _selectedPediatrician!.clinicLocationIds.isNotEmpty
-            ? _selectedPediatrician!.clinicLocationIds
-                .first // TODO: Allow selecting location if doctor has multiple
-            : 'default_loc_id', // Fallback location ID
-        locationName:
-            'Clínica Ejemplo', // TODO: Get actual location name based on ID
+        locationId: _selectedLocation!.id,
+        locationName: _selectedLocation!.name,
+        locationAddress: _selectedLocation!.address,
         type: apptType,
         productIds: [_selectedProduct!.id], // Use the selected product ID
         status: AppointmentStatus.scheduled,
@@ -269,10 +254,9 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
       Fluttertoast.showToast(
           msg: '¡Cita agendada con éxito!',
           toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.TOP,
           timeInSecForIosWeb: 1,
-          backgroundColor: const Color.fromARGB(255, 12, 95, 15),
-          textColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          textColor: Theme.of(context).colorScheme.onPrimary,
           fontSize: 18.0);
       Navigator.pop(context); // Go back to the previous screen
     } catch (e) {
@@ -280,10 +264,9 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
       Fluttertoast.showToast(
           msg: 'Error al agendar la cita: $e',
           toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.CENTER,
           timeInSecForIosWeb: 3,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.error,
+          textColor: Theme.of(context).colorScheme.onError,
           fontSize: 16.0);
     } finally {
       if (mounted) {
@@ -299,7 +282,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
     final theme = Theme.of(context);
     // Update canSubmit check
     final bool canSubmit = _selectedProduct != null &&
-        _selectedPediatrician != null &&
+        _selectedLocation != null &&
         _selectedDate != null &&
         _selectedTimeSlot != null &&
         !_isLoading;
@@ -310,7 +293,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
             ? 'Seleccionar Consulta'
             : 'Agendar Cita'), // Dynamic title
         backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -333,12 +316,12 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
 
             // --- Show scheduling steps only if a product is selected ---
             if (_selectedProduct != null) ...[
-              // 2. Pediatrician Selection
-              Text('Selecciona un Pediatra',
+              // 2. Punto de Vacunación Selection
+              Text('Selecciona un punto de vacunación',
                   style: theme.textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              _buildPediatricianDropdown(),
+              _buildLocationDropdown(),
               const SizedBox(height: 24),
 
               // 3. Date Selection
@@ -350,7 +333,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
               const SizedBox(height: 24),
 
               // 4. Time Slot Selection (only if date and doctor are selected)
-              if (_selectedDate != null && _selectedPediatrician != null) ...[
+              if (_selectedDate != null && _selectedLocation != null) ...[
                 Text('Selecciona una Hora',
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold)),
@@ -369,7 +352,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
                             : null, // Disable if not ready or loading
                         style: ElevatedButton.styleFrom(
                           backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: Colors.white,
+                          foregroundColor: theme.colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 50, vertical: 15),
                           textStyle: const TextStyle(fontSize: 18),
@@ -401,9 +384,9 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
   // Widget to select a Consultation product
   Widget _buildProductDropdown() {
     if (_availableConsultations.isEmpty) {
-      return const Text(
+      return Text(
         'No hay consultas disponibles para agendar.',
-        style: TextStyle(color: Colors.red),
+        style: TextStyle(color: Theme.of(context).colorScheme.error),
       );
     }
 
@@ -447,7 +430,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
             Text(
               _selectedProduct!.commonName, // Use _selectedProduct!
               style: theme.textTheme.titleMedium
-                  ?.copyWith(color: Colors.grey[700]),
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
             Text(
@@ -461,7 +444,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
               alignment: Alignment.centerRight,
               child: Text(
                 // Use _selectedProduct!
-                '\$${_selectedProduct!.price.toStringAsFixed(2)}',
+                '\$${_selectedProduct!.price?.toStringAsFixed(2)}',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.primary,
@@ -474,45 +457,44 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
     );
   }
 
-  Widget _buildPediatricianDropdown() {
-    // Show message if no product is selected yet OR no pediatricians are available
+  Widget _buildLocationDropdown() {
     if (_selectedProduct == null) {
-      return const Text(
+      return Text(
         'Selecciona un producto primero.',
-        style: TextStyle(color: Colors.grey),
+        style: TextStyle(color: Theme.of(context).colorScheme.outline),
       );
     }
-    if (_availablePediatricians.isEmpty) {
-      return const Text(
-        'No hay pediatras disponibles para este producto/consulta.',
-        style: TextStyle(color: Colors.orange),
+    if (_availableLocations.isEmpty) {
+      return Text(
+        'No hay puntos de vacunación disponibles.',
+        style: TextStyle(color: Theme.of(context).colorScheme.tertiary),
       );
     }
 
-    return DropdownButtonFormField<Pediatrician>(
-      value: _selectedPediatrician,
-      hint: const Text('Selecciona...'),
+    return DropdownButtonFormField<Location>(
+      value: _selectedLocation,
+      hint: const Text('Selecciona punto...'),
       isExpanded: true,
       decoration: InputDecoration(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       ),
-      items: _availablePediatricians.map((Pediatrician pediatrician) {
-        return DropdownMenuItem<Pediatrician>(
-          value: pediatrician,
-          child: Text(pediatrician.displayName ?? 'Nombre Desconocido'),
+      items: _availableLocations.map((Location location) {
+        return DropdownMenuItem<Location>(
+          value: location,
+          child: Text(location.name),
         );
       }).toList(),
-      onChanged: _onPediatricianSelected, // Use the dedicated handler
+      onChanged: _onLocationSelected,
       validator: (value) => value == null ? 'Campo requerido' : null,
     );
   }
 
   Widget _buildDatePicker(BuildContext context) {
     return InkWell(
-      // Disable tap if pediatrician isn't selected yet
-      onTap: _selectedPediatrician != null ? () => _selectDate(context) : null,
+      // Disable tap if location isn't selected yet
+      onTap: _selectedLocation != null ? () => _selectDate(context) : null,
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: 'Fecha seleccionada',
@@ -521,21 +503,21 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
               const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
           suffixIcon: const Icon(Icons.calendar_today),
           // Dim the field if disabled
-          filled: _selectedPediatrician == null,
-          fillColor: _selectedPediatrician == null
-              ? Colors.grey[200]
+          filled: _selectedLocation == null,
+          fillColor: _selectedLocation == null
+              ? Theme.of(context).colorScheme.surfaceContainerHigh
               : Colors.transparent,
         ),
         child: Text(
-          _selectedPediatrician == null
-              ? 'Selecciona un pediatra primero'
+          _selectedLocation == null
+              ? 'Selecciona un punto de vacunación primero'
               : _selectedDate == null
                   ? 'Toca para seleccionar'
                   : DateFormat.yMMMd('es_ES').format(_selectedDate!),
           style: TextStyle(
-            color: _selectedDate == null || _selectedPediatrician == null
-                ? Colors.grey[600]
-                : Colors.black,
+            color: _selectedDate == null || _selectedLocation == null
+                ? Theme.of(context).colorScheme.onSurfaceVariant
+                : Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
@@ -544,9 +526,9 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
 
   Widget _buildTimeSlotDropdown() {
     if (_availableTimeSlots.isEmpty) {
-      return const Text(
-        'No hay horarios disponibles para esta fecha/doctor.',
-        style: TextStyle(color: Colors.orange),
+      return Text(
+        'No hay horarios disponibles para esta fecha/punto.',
+        style: TextStyle(color: Theme.of(context).colorScheme.tertiary),
       );
     }
     return DropdownButtonFormField<DateTime>(

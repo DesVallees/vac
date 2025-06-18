@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:vac/assets/data_classes/user.dart'
+import 'package:vaq/assets/data_classes/user.dart'
     as user_classes; // Import User classes
 
 class SignupScreen extends StatefulWidget {
@@ -42,6 +42,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   // --- Signup Logic ---
   Future<void> _signupUser() async {
+    final theme = Theme.of(context);
     // Validate the form
     if (!_formKey.currentState!.validate()) {
       return;
@@ -51,8 +52,8 @@ class _SignupScreenState extends State<SignupScreen> {
     if (_passwordController.text != _confirmPasswordController.text) {
       Fluttertoast.showToast(
           msg: 'Las contraseñas no coinciden.',
-          backgroundColor: Colors.orange,
-          textColor: Colors.white);
+          backgroundColor: theme.colorScheme.error,
+          textColor: theme.colorScheme.onError);
       return;
     }
 
@@ -105,7 +106,7 @@ class _SignupScreenState extends State<SignupScreen> {
           Fluttertoast.showToast(
               msg: 'Error al guardar datos de usuario. Intenta iniciar sesión.',
               toastLength: Toast.LENGTH_LONG,
-              backgroundColor: Colors.red);
+              backgroundColor: theme.colorScheme.error);
         }
       } else {
         throw Exception(
@@ -127,18 +128,16 @@ class _SignupScreenState extends State<SignupScreen> {
       Fluttertoast.showToast(
           msg: message,
           toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
+          backgroundColor: theme.colorScheme.error,
+          textColor: theme.colorScheme.onError,
           fontSize: 16.0);
     } catch (e) {
       print('Generic Signup Error: $e');
       Fluttertoast.showToast(
           msg: 'Ocurrió un error. Por favor, inténtalo de nuevo.',
           toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
+          backgroundColor: theme.colorScheme.error,
+          textColor: theme.colorScheme.onError,
           fontSize: 16.0);
     } finally {
       // Only stop loading if the process wasn't fully successful OR if still mounted
@@ -189,8 +188,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   Text(
                     'Completa los datos para registrarte',
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(color: Colors.grey[600]),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.6)),
                   ),
                   const SizedBox(height: 40),
 
@@ -279,7 +278,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     onPressed: _isLoading ? null : _signupUser,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: theme.colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -287,11 +286,12 @@ class _SignupScreenState extends State<SignupScreen> {
                           fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     child: _isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             height: 24,
                             width: 24,
                             child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 3))
+                                color: theme.colorScheme.onPrimary,
+                                strokeWidth: 3))
                         : const Text('Registrarse'),
                   ),
                   const SizedBox(height: 20),

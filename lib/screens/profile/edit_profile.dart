@@ -1,8 +1,7 @@
-// lib/screens/profile/edit_profile.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vac/assets/data_classes/user.dart';
-import 'package:vac/services/user_data.dart'; // Import your service
+import 'package:vaq/assets/data_classes/user.dart';
+import 'package:vaq/services/user_data.dart'; // Import your service
 import 'package:fluttertoast/fluttertoast.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -27,21 +26,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Get the current user data ONCE from the provider
-    _currentUser = context.read<User?>();
+    _displayNameController = TextEditingController();
+    _phoneNumberController = TextEditingController();
+  }
 
-    // Initialize controllers with current data (handle null user gracefully)
-    _displayNameController =
-        TextEditingController(text: _currentUser?.displayName ?? '');
-    _phoneNumberController =
-        TextEditingController(text: _currentUser?.phoneNumber ?? '');
-
-    // Example for pediatrician-specific field
-    // if (_currentUser is Pediatrician) {
-    //   _bioController = TextEditingController(text: (_currentUser as Pediatrician).bio ?? '');
-    // } else {
-    //   _bioController = TextEditingController(); // Initialize empty if not pediatrician
-    // }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final newUser = context.watch<User?>();
+    if (newUser != null && newUser != _currentUser) {
+      _currentUser = newUser;
+      _displayNameController.text = newUser.displayName ?? '';
+      _phoneNumberController.text = newUser.phoneNumber ?? '';
+    }
   }
 
   @override
@@ -54,6 +51,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    final theme = Theme.of(context);
+
     // Validate the form
     if (!_formKey.currentState!.validate()) {
       return; // Don't proceed if validation fails
@@ -86,8 +85,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // Show success message
       Fluttertoast.showToast(
         msg: 'Perfil actualizado con éxito',
-        backgroundColor: Colors.green,
-        textColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        textColor: theme.colorScheme.onPrimary,
       );
 
       // Navigate back to the profile screen
@@ -98,8 +97,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       print('Error saving profile: $e');
       Fluttertoast.showToast(
         msg: 'Error al actualizar el perfil: ${e.toString()}',
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
+        backgroundColor: theme.colorScheme.error,
+        textColor: theme.colorScheme.onError,
         toastLength: Toast.LENGTH_LONG,
       );
     } finally {
@@ -116,8 +115,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Handle case where user data might still be loading initially (though unlikely here)
-    if (_currentUser == null) {
+    final currentUser = _currentUser;
+    if (currentUser == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Editar Perfil')),
         body: const Center(child: CircularProgressIndicator()),
@@ -156,10 +155,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // --- Avatar (Non-editable for now) ---
               CircleAvatar(
                 radius: 50,
-                backgroundColor: Colors.grey[300],
-                backgroundImage: (_currentUser!.photoUrl != null &&
-                        _currentUser!.photoUrl!.isNotEmpty)
-                    ? NetworkImage(_currentUser!.photoUrl!)
+                backgroundColor:
+                    Theme.of(context).colorScheme.surfaceContainerHigh,
+                backgroundImage: (currentUser.photoUrl != null &&
+                        currentUser.photoUrl!.isNotEmpty)
+                    ? NetworkImage(currentUser.photoUrl!)
                     : const AssetImage('lib/assets/images/default_avatar.png')
                         as ImageProvider,
                 // TODO: Add button/icon overlay to change photo later
@@ -234,7 +234,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           height: 24,
                           padding: const EdgeInsets.all(2.0),
                           child: const CircularProgressIndicator(
-                            color: Colors.white,
+                            color: theme.onPrimary,
                             strokeWidth: 3,
                           ),
                         )

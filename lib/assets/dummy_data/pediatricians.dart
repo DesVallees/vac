@@ -1,4 +1,4 @@
-import 'package:vac/assets/data_classes/user.dart';
+import 'package:vaq/assets/data_classes/user.dart';
 
 class PediatriciansRepository {
   List<Pediatrician> getPediatricians() {
