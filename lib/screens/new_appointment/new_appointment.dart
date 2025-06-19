@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart'; // For generating unique IDs
 
 import 'package:vaq/assets/data_classes/product.dart';
@@ -10,6 +11,7 @@ import 'package:vaq/assets/dummy_data/appointments.dart';
 import 'package:vaq/assets/dummy_data/vaccines.dart'; // Import product repository/data
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:vaq/assets/helpers/holidays.dart';
+import 'package:vaq/providers/bottom_navigation_bar_provider.dart';
 
 class ScheduleAppointmentScreen extends StatefulWidget {
   // Make product optional
@@ -258,7 +260,10 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
           backgroundColor: Theme.of(context).colorScheme.primary,
           textColor: Theme.of(context).colorScheme.onPrimary,
           fontSize: 18.0);
-      Navigator.pop(context); // Go back to the previous screen
+      Navigator.of(context)
+          .popUntil((route) => route.isFirst); // Go back to first layer
+      Provider.of<BottomNavigationBarProvider>(context, listen: false)
+          .navigateTo(2);
     } catch (e) {
       print('Error scheduling appointment: $e');
       Fluttertoast.showToast(

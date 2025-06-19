@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:vaq/providers/bottom_navigation_bar_provider.dart';
 import 'package:vaq/screens/home/home.dart';
 import 'package:vaq/screens/schedule/schedule.dart';
 import 'package:vaq/screens/store/store.dart';
@@ -44,7 +45,8 @@ class MyApp extends StatelessWidget {
         StreamProvider<User?>.value(
           value: userDataService.userDataStream,
           initialData: null, // Initial data is null (no user logged in)
-        )
+        ),
+        ChangeNotifierProvider(create: (_) => BottomNavigationBarProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner:
@@ -59,6 +61,12 @@ class MyApp extends StatelessWidget {
                   surface: const Color(0xFFF4F6F8),
                   onSurface: const Color(0xFF1A202C),
                   tertiary: const Color(0xFFF5A623)),
+          pageTransitionsTheme: PageTransitionsTheme(
+            builders: {
+              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            },
+          ),
         ),
 
         // --- Localization Configuration ---
@@ -86,35 +94,21 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  var selectedIndex = 1;
-
-  void _navigateToPage(int index) {
-    if (index >= 0 && index <= 2) {
-      // Basic bounds check
-      setState(() {
-        selectedIndex = index;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     Widget page;
+    final navProvider = Provider.of<BottomNavigationBarProvider>(context);
+    final selectedIndex = navProvider.selectedIndex;
+
     switch (selectedIndex) {
       case 0:
         page = Store();
       case 1:
-        page = Home(
-          onNavigateToSchedule: () => _navigateToPage(2),
-          onNavigateToStore: () => _navigateToPage(0),
-        );
+        page = Home();
       case 2:
         page = Schedule();
       default:
-        page = Home(
-          onNavigateToSchedule: () => _navigateToPage(2),
-          onNavigateToStore: () => _navigateToPage(0),
-        );
+        page = Home();
         print('Warning: Invalid selectedIndex $selectedIndex');
     }
 
@@ -159,9 +153,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ],
               currentIndex: selectedIndex,
-              onTap: (value) {
-                _navigateToPage(value);
-              },
+              onTap: navProvider.navigateTo,
             ),
           ),
         ],

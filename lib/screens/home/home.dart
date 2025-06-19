@@ -11,22 +11,13 @@ import 'package:vaq/assets/dummy_data/articles.dart';
 import 'package:vaq/assets/data_classes/article.dart';
 import 'package:provider/provider.dart'; // Import Provider
 import 'package:vaq/assets/data_classes/user.dart'; // Import the User class
+import 'package:vaq/providers/bottom_navigation_bar_provider.dart';
 import 'package:vaq/screens/history/history.dart';
 import 'package:vaq/screens/profile/profile.dart'; // Import the Profile screen
 import 'package:vaq/screens/new_appointment/new_appointment.dart';
 import 'package:vaq/screens/settings/settings.dart'; // Import the new appointment screen
 
 class Home extends StatelessWidget {
-  // Callback function to navigate to the schedule page
-  final VoidCallback onNavigateToSchedule;
-  // Callback function to navigate to the store page
-  final VoidCallback onNavigateToStore;
-
-  const Home(
-      {super.key,
-      required this.onNavigateToSchedule,
-      required this.onNavigateToStore}); // Add constructor
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -161,7 +152,9 @@ class Home extends StatelessWidget {
           Center(
             // Center the button
             child: TextButton(
-              onPressed: onNavigateToStore, // Use the passed callback
+              onPressed: () => Provider.of<BottomNavigationBarProvider>(context,
+                      listen: false)
+                  .navigateTo(0), // Use the passed callback
               child: const Text(
                 'Ver Más Productos',
                 style: TextStyle(fontSize: 16),
@@ -223,7 +216,9 @@ class Home extends StatelessWidget {
           Center(
             // Center the button
             child: TextButton(
-              onPressed: onNavigateToSchedule, // Use the passed callback
+              onPressed: () => Provider.of<BottomNavigationBarProvider>(context,
+                      listen: false)
+                  .navigateTo(2), // Use the passed callback
               child: const Text(
                 'Ver Todas las Citas',
                 style: TextStyle(fontSize: 16),

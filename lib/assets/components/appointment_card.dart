@@ -75,9 +75,9 @@ class AppointmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color cardColor = _getAppointmentColor(context);
     final String day = DateFormat('d', 'es_ES').format(appointment.dateTime);
-    final String weekday = DateFormat('E', 'es_ES')
+    final String weekday = DateFormat('MMM', 'es_ES')
         .format(appointment.dateTime)
-        .toUpperCase(); // e.g., MAR
+        .toUpperCase(); // e.g., ENE
     final String time =
         DateFormat.jm().format(appointment.dateTime); // e.g., 9:30 AM
     final colorScheme = Theme.of(context).colorScheme;
