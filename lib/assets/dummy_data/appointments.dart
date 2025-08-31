@@ -1,79 +1,49 @@
 import 'package:uuid/uuid.dart';
 import 'package:vaq/assets/data_classes/appointment.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AppointmentRepository {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   static final List<Appointment> _appointments = [
+    // Sample appointments for testing
     Appointment(
-      id: 'appt1',
-      patientId: 'p1',
-      doctorId: 'doc1',
-      doctorName: 'Dr. Freddy',
-      dateTime:
-          DateTime.now().add(const Duration(days: 1, hours: 9, minutes: 30)),
+      id: '1',
+      patientId: 'patient1',
+      patientName: 'María González',
+      doctorId: 'doctor1',
+      doctorName: 'Dr. Carlos Rodríguez',
+      doctorSpecialty: 'Pediatría',
+      dateTime: DateTime.now().add(const Duration(days: 2)),
       duration: const Duration(minutes: 30),
-      locationId: 'loc1',
-      locationName: 'Clínica Central',
+      locationId: 'location1',
+      locationName: 'VAQ+ Clínica Norte',
+      locationAddress: 'Calle 123 #45-67, Bogotá',
       type: AppointmentType.vaccination,
-      productIds: ['v_hepb'], // Example product ID
+      productIds: ['vaccine1', 'vaccine2'],
       status: AppointmentStatus.scheduled,
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
+      notes: 'Vacunación de rutina - 2 meses',
+      createdAt: DateTime.now().subtract(const Duration(days: 5)),
+      createdByUserId: 'user1',
     ),
     Appointment(
-      id: 'appt2',
-      patientId: 'p2',
-      doctorId: 'doc2',
-      doctorName: 'Dra. Constanza',
-      dateTime: DateTime.now().add(const Duration(days: 2, hours: 14)),
+      id: '2',
+      patientId: 'patient1',
+      patientName: 'María González',
+      doctorId: 'doctor2',
+      doctorName: 'Dra. Ana Martínez',
+      doctorSpecialty: 'Medicina General',
+      dateTime: DateTime.now().add(const Duration(days: 7)),
       duration: const Duration(minutes: 45),
-      locationId: 'loc2',
-      locationName: 'Clínica Norte',
+      locationId: 'location2',
+      locationName: 'VAQ+ Clínica Sur',
+      locationAddress: 'Carrera 78 #90-12, Bogotá',
       type: AppointmentType.consultation,
-      productIds: [], // No products for consultation
-      status: AppointmentStatus.scheduled,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    Appointment(
-      id: 'appt3',
-      patientId: 'p1',
-      doctorId: 'doc3',
-      doctorName: 'Dra. Martha',
-      dateTime:
-          DateTime.now().add(const Duration(days: 3, hours: 12, minutes: 30)),
-      duration: const Duration(minutes: 30),
-      locationId: 'loc1',
-      locationName: 'Clínica Central',
-      type: AppointmentType.packageApplication,
-      productIds: ['pkg_pentavalente'], // Example package ID
-      status: AppointmentStatus.scheduled,
-      createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-    ),
-    Appointment(
-      id: 'appt4',
-      patientId: 'p3',
-      doctorId: 'doc1',
-      doctorName: 'Dr. Freddy',
-      dateTime: DateTime.now().add(const Duration(days: 4, hours: 16)),
-      duration: const Duration(minutes: 20),
-      locationId: 'loc1',
-      locationName: 'Clínica Central',
-      type: AppointmentType.checkup,
       productIds: [],
       status: AppointmentStatus.scheduled,
+      notes: 'Consulta de seguimiento',
       createdAt: DateTime.now().subtract(const Duration(days: 3)),
-    ),
-    Appointment(
-      id: 'appt5',
-      patientId: 'p2',
-      doctorId: 'doc4',
-      doctorName: 'Dra. Ana',
-      dateTime: DateTime.now().add(const Duration(days: 5, hours: 10)),
-      duration: const Duration(minutes: 30),
-      locationId: 'loc2',
-      locationName: 'Clínica Norte',
-      type: AppointmentType.vaccination,
-      productIds: ['v_dtp', 'v_hib'],
-      status: AppointmentStatus.scheduled,
-      createdAt: DateTime.now().subtract(const Duration(days: 4)),
+      createdByUserId: 'user1',
     ),
   ];
 
@@ -111,5 +81,34 @@ class AppointmentRepository {
     _appointments.add(appointmentToAdd);
     print('Appointment added: ${appointmentToAdd.id}'); // For debugging
     print('Total appointments: ${_appointments.length}');
+  }
+
+  Future<void> saveAppointment(Appointment appointment) async {
+    try {
+      await _firestore.collection('appointments').doc(appointment.id).set({
+        'id': appointment.id,
+        'patientId': appointment.patientId,
+        'patientName': appointment.patientName,
+        'doctorId': appointment.doctorId,
+        'doctorName': appointment.doctorName,
+        'doctorSpecialty': appointment.doctorSpecialty,
+        'dateTime': Timestamp.fromDate(appointment.dateTime),
+        'durationMinutes': appointment.duration.inMinutes,
+        'locationId': appointment.locationId,
+        'locationName': appointment.locationName,
+        'locationAddress': appointment.locationAddress,
+        'type': appointment.type.toString(),
+        'productIds': appointment.productIds,
+        'status': appointment.status.toString(),
+        'createdAt': Timestamp.fromDate(appointment.createdAt),
+        'createdByUserId': appointment.createdByUserId,
+        'lastUpdatedAt': appointment.lastUpdatedAt != null
+            ? Timestamp.fromDate(appointment.lastUpdatedAt!)
+            : null,
+        'notes': appointment.notes,
+      });
+    } catch (e) {
+      throw Exception('Failed to save appointment: $e');
+    }
   }
 }

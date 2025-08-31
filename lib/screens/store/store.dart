@@ -5,8 +5,7 @@ import 'package:vaq/assets/components/package_card.dart';
 import 'package:vaq/assets/components/search_and_filter_bar.dart';
 import 'package:vaq/assets/data_classes/filter_options.dart';
 import 'package:vaq/assets/data_classes/product.dart';
-import 'package:vaq/assets/dummy_data/vaccines.dart';
-import 'package:vaq/assets/dummy_data/packages.dart';
+import 'package:vaq/services/dynamic_product_repository.dart';
 
 class Store extends StatefulWidget {
   const Store({super.key});
@@ -17,13 +16,11 @@ class Store extends StatefulWidget {
 
 class _StoreState extends State<Store> {
   // ───────────────────────────────────────────────── repositories ─────────────
-  final ProductRepository _productRepo = ProductRepository();
-  final VaccinationProgramRepository _programRepo =
-      VaccinationProgramRepository();
+  final DynamicProductRepository _productRepo = DynamicProductRepository();
 
   // original data
-  late final List<Vaccine> _allVaccines;
-  late final List<VaccinationProgram> _allPrograms;
+  List<Vaccine> _allVaccines = [];
+  List<VaccinationProgram> _allPrograms = [];
 
   // filtered data
   List<Vaccine> _filteredVaccines = [];
@@ -32,6 +29,9 @@ class _StoreState extends State<Store> {
   // search & filter state
   String _searchTerm = '';
   late Map<String, dynamic> _activeFilters;
+
+  // loading state
+  bool _isLoading = true;
 
   // filter configuration for the SearchAndFilterBar
   final List<FilterOption> _storeFilters = [
@@ -65,11 +65,28 @@ class _StoreState extends State<Store> {
   @override
   void initState() {
     super.initState();
-    _allVaccines = _productRepo.getProducts().whereType<Vaccine>().toList();
-    _allPrograms = _programRepo.getPrograms();
-
     _activeFilters = {for (final f in _storeFilters) f.id: f.initialValue};
-    _applyFilters();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final products = await _productRepo.getProducts();
+      _allVaccines = products.whereType<Vaccine>().toList();
+      _allPrograms = products.whereType<VaccinationProgram>().toList();
+
+      _applyFilters();
+    } catch (e) {
+      print('Error loading store data: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   // ─────────────────────────────────────────────── handlers ────────────────────
@@ -137,6 +154,12 @@ class _StoreState extends State<Store> {
   // ───────────────────────────────────────────────────── UI ────────────────────
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 30),
       child: SingleChildScrollView(

@@ -1,14 +1,18 @@
 // lib/screens/profile/medical_history_screen.dart (or replace in profile.dart)
 import 'package:flutter/material.dart';
-import 'package:vaq/assets/dummy_data/history.dart'; // Import the dummy data
+
 import 'package:vaq/assets/helpers/history.dart'; // Import helpers (adjust path if needed)
+import 'package:vaq/assets/data_classes/history.dart'; // Import MedicalHistory class
 
 class MedicalHistoryScreen extends StatelessWidget {
   const MedicalHistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final history = dummyMedicalHistory; // Use the dummy data
+    // TODO: Replace with dynamic data from Firestore when user-specific medical history is implemented
+    final history = MedicalHistory(
+        patientProfileId:
+            'placeholder'); // Create empty medical history for now
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:vaq/assets/data_classes/product.dart';
 import 'package:vaq/screens/new_appointment/new_appointment.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
-import 'package:vaq/assets/dummy_data/vaccines.dart';
+import 'package:vaq/services/dynamic_product_repository.dart';
 import 'package:vaq/assets/components/detailed_product_card.dart';
 
 class ProductDetailPage extends StatelessWidget {
@@ -306,52 +306,67 @@ class ProductDetailPage extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    // Fetch full product objects based on IDs
-    final repo = ProductRepository();
-    final allProducts = repo.getProducts();
-    final includedProducts = package.includedProductIds
-        .map((id) => allProducts.firstWhere(
-              (p) => p.id == id,
-            ))
-        .whereType<Product>()
-        .toList();
+    return FutureBuilder<List<Product>>(
+        future: DynamicProductRepository().getProducts(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return const Center(child: Text('Error al cargar los productos'));
+          } else if (!snapshot.hasData) {
+            return const Center(child: Text('No se encontraron productos'));
+          }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Detalles del Paquete', context),
-        const SizedBox(height: 12),
-        if (package.targetMilestone != null &&
-            package.targetMilestone!.isNotEmpty)
-          _buildDetailRow('Etapa Objetivo', package.targetMilestone!, context),
-        _buildDetailRow('Edad Mínima', '${package.minAge} meses', context),
-        _buildDetailRow('Edad Máxima', '${package.maxAge} meses', context),
-        _buildDetailRow('Doctores Aplicables',
-            package.applicableDoctors.join(', '), context),
-        const SizedBox(height: 16),
-        // --- Included products cards ---
-        Text(
-          'Productos Incluidos',
-          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        ...includedProducts.map(
-          (prod) => Padding(
-            padding: const EdgeInsets.only(bottom: 12.0),
-            child: DetailedProductCard(product: prod),
-          ),
-        ),
-        if (package.specialIndications != null &&
-            package.specialIndications!.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          _buildDetailRow(
-              'Indicaciones Especiales', package.specialIndications!, context),
-        ],
-        const SizedBox(height: 16),
-        const Divider(),
-        const SizedBox(height: 16),
-      ],
-    );
+          // Fetch full product objects based on IDs
+          final allProducts = snapshot.data!;
+          final includedProducts = package.includedProductIds
+              .map((id) => allProducts.firstWhere(
+                    (p) => p.id == id,
+                  ))
+              .whereType<Product>()
+              .toList();
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionTitle('Detalles del Paquete', context),
+              const SizedBox(height: 12),
+              if (package.targetMilestone != null &&
+                  package.targetMilestone!.isNotEmpty)
+                _buildDetailRow(
+                    'Etapa Objetivo', package.targetMilestone!, context),
+              _buildDetailRow(
+                  'Edad Mínima', '${package.minAge} meses', context),
+              _buildDetailRow(
+                  'Edad Máxima', '${package.maxAge} meses', context),
+              _buildDetailRow('Doctores Aplicables',
+                  package.applicableDoctors.join(', '), context),
+              const SizedBox(height: 16),
+              // --- Included products cards ---
+              Text(
+                'Productos Incluidos',
+                style: textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              ...includedProducts.map(
+                (prod) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: DetailedProductCard(product: prod),
+                ),
+              ),
+              if (package.specialIndications != null &&
+                  package.specialIndications!.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _buildDetailRow('Indicaciones Especiales',
+                    package.specialIndications!, context),
+              ],
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+            ],
+          );
+        });
   }
 
   /// Details Section specific to Consultations

@@ -92,36 +92,86 @@ class Appointment {
 
   /// Factory constructor to create an Appointment from a Firestore document snapshot.
   factory Appointment.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return Appointment(
-      id: doc.id,
-      patientId: data['patientId'] ?? '',
-      patientName: data['patientName'],
-      doctorId: data['doctorId'] ?? '',
-      doctorName: data['doctorName'],
-      doctorSpecialty: data['doctorSpecialty'],
-      dateTime: (data['dateTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      duration:
-          Duration(minutes: data['durationMinutes'] ?? 30), // Default duration
-      locationId: data['locationId'] ?? '',
-      locationName: data['locationName'] ?? '',
-      locationAddress: data['locationAddress'],
-      type: AppointmentType.values.firstWhere(
-        (e) => e.toString() == data['type'],
-        orElse: () =>
-            AppointmentType.consultation, // Default if type is missing/invalid
-      ),
-      productIds: List<String>.from(data['productIds'] ?? []),
-      status: AppointmentStatus.values.firstWhere(
-        (e) => e.toString() == data['status'],
-        orElse: () =>
-            AppointmentStatus.scheduled, // Default if status is missing/invalid
-      ),
-      notes: data['notes'],
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      createdByUserId: data['createdByUserId'],
-      lastUpdatedAt: (data['lastUpdatedAt'] as Timestamp?)?.toDate(),
-    );
+    try {
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+      // Helper function to safely parse enums
+      AppointmentType parseAppointmentType(dynamic value) {
+        if (value == null) return AppointmentType.consultation;
+        try {
+          return AppointmentType.values.firstWhere(
+            (e) => e.toString() == value.toString(),
+            orElse: () => AppointmentType.consultation,
+          );
+        } catch (e) {
+          return AppointmentType.consultation;
+        }
+      }
+
+      AppointmentStatus parseAppointmentStatus(dynamic value) {
+        if (value == null) return AppointmentStatus.scheduled;
+        try {
+          return AppointmentStatus.values.firstWhere(
+            (e) => e.toString() == value.toString(),
+            orElse: () => AppointmentStatus.scheduled,
+          );
+        } catch (e) {
+          return AppointmentStatus.scheduled;
+        }
+      }
+
+      // Helper function to parse date from various formats
+      DateTime parseDate(dynamic dateData) {
+        if (dateData == null) return DateTime.now();
+        if (dateData is Timestamp) return dateData.toDate();
+        if (dateData is String) {
+          try {
+            return DateTime.parse(dateData);
+          } catch (e) {
+            return DateTime.now();
+          }
+        }
+        return DateTime.now();
+      }
+
+      return Appointment(
+        id: doc.id,
+        patientId: data['patientId'] ?? '',
+        patientName: data['patientName'],
+        doctorId: data['doctorId'] ?? '',
+        doctorName: data['doctorName'],
+        doctorSpecialty: data['doctorSpecialty'],
+        dateTime: parseDate(data['dateTime']),
+        duration: Duration(
+            minutes: data['durationMinutes'] ??
+                data['duration'] ??
+                30), // Handle both field names
+        locationId: data['locationId'] ?? '',
+        locationName: data['locationName'] ?? '',
+        locationAddress: data['locationAddress'],
+        type: parseAppointmentType(data['type']),
+        productIds: List<String>.from(data['productIds'] ?? []),
+        status: parseAppointmentStatus(data['status']),
+        notes: data['notes'],
+        createdAt: parseDate(data['createdAt']),
+        createdByUserId: data['createdByUserId'],
+        lastUpdatedAt: parseDate(data['lastUpdatedAt']),
+      );
+    } catch (e) {
+      // Return a default appointment if parsing fails
+      return Appointment(
+        id: doc.id,
+        patientId: '',
+        doctorId: '',
+        dateTime: DateTime.now(),
+        duration: Duration(minutes: 30),
+        locationId: '',
+        locationName: '',
+        type: AppointmentType.consultation,
+        status: AppointmentStatus.scheduled,
+        createdAt: DateTime.now(),
+      );
+    }
   }
 
   /// Method to convert an Appointment instance to a Map for saving to Firestore.

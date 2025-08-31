@@ -79,7 +79,7 @@ class AppointmentCard extends StatelessWidget {
         .format(appointment.dateTime)
         .toUpperCase(); // e.g., ENE
     final String time =
-        DateFormat.jm().format(appointment.dateTime); // e.g., 9:30 AM
+        DateFormat.jm('es_ES').format(appointment.dateTime); // e.g., 9:30 AM
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(

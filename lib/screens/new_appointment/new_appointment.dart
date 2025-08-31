@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart'; // For generating unique IDs
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:vaq/assets/data_classes/product.dart';
 import 'package:vaq/assets/data_classes/appointment.dart';
 import 'package:vaq/assets/data_classes/location.dart';
-import 'package:vaq/assets/dummy_data/location.dart';
-import 'package:vaq/assets/dummy_data/appointments.dart';
-import 'package:vaq/assets/dummy_data/vaccines.dart'; // Import product repository/data
+import 'package:vaq/services/dynamic_location_repository.dart';
+import 'package:vaq/services/dynamic_appointment_repository.dart';
+import 'package:vaq/services/dynamic_product_repository.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:vaq/assets/helpers/holidays.dart';
 import 'package:vaq/providers/bottom_navigation_bar_provider.dart';
@@ -40,9 +41,12 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
       false; // Flag to know if we need to select a product
 
   // Repositories
-  final AppointmentRepository _appointmentRepository = AppointmentRepository();
-  final ProductRepository _productRepository =
-      ProductRepository(); // Add product repository
+  final DynamicAppointmentRepository _appointmentRepository =
+      DynamicAppointmentRepository();
+  final DynamicProductRepository _productRepository =
+      DynamicProductRepository();
+  final DynamicLocationRepository _locationRepository =
+      DynamicLocationRepository();
 
   @override
   void initState() {
@@ -58,28 +62,38 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
   }
 
   // Load consultation products if none was provided initially
-  void _loadAvailableConsultations() {
-    final allProducts = _productRepository.getProducts();
-    setState(() {
-      _availableConsultations = allProducts.whereType<Consultation>().toList();
-      // Reset other selections when entering product selection mode
-      _selectedLocation = null;
-      _selectedDate = null;
-      _selectedTimeSlot = null;
-      _availableLocations = [];
-      _availableTimeSlots = [];
-    });
+  Future<void> _loadAvailableConsultations() async {
+    try {
+      final allProducts = await _productRepository.getProducts();
+      setState(() {
+        _availableConsultations =
+            allProducts.whereType<Consultation>().toList();
+        // Reset other selections when entering product selection mode
+        _selectedLocation = null;
+        _selectedDate = null;
+        _selectedTimeSlot = null;
+        _availableLocations = [];
+        _availableTimeSlots = [];
+      });
+    } catch (e) {
+      print('Error loading consultations: $e');
+    }
   }
 
   // Load locations based on the _selectedProduct
-  void _loadAvailableLocations() {
-    setState(() {
-      _availableLocations = dummyLocations;
-      _selectedLocation = null;
-      _selectedDate = null;
-      _selectedTimeSlot = null;
-      _availableTimeSlots = [];
-    });
+  Future<void> _loadAvailableLocations() async {
+    try {
+      final locations = await _locationRepository.getLocations();
+      setState(() {
+        _availableLocations = locations;
+        _selectedLocation = null;
+        _selectedDate = null;
+        _selectedTimeSlot = null;
+        _availableTimeSlots = [];
+      });
+    } catch (e) {
+      print('Error loading locations: $e');
+    }
   }
 
   // --- Date and Time Selection Logic ---
@@ -89,20 +103,34 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
     final startOfToday = DateTime(today.year, today.month, today.day);
     final holidays = ColombianHolidays.getHolidays(year: today.year);
 
+    // Helper function to check if a date is selectable
+    bool isDateSelectable(DateTime date) {
+      // Only Monday–Friday and not a holiday
+      if (date.weekday < DateTime.monday || date.weekday > DateTime.friday) {
+        return false;
+      }
+      final normalized = DateTime.utc(date.year, date.month, date.day);
+      return !holidays.contains(normalized);
+    }
+
+    // Find a valid initial date
+    DateTime initialDate = today;
+    if (_selectedDate != null && isDateSelectable(_selectedDate!)) {
+      initialDate = _selectedDate!;
+    } else {
+      // Find the next valid date starting from today
+      while (!isDateSelectable(initialDate)) {
+        initialDate = initialDate.add(const Duration(days: 1));
+      }
+    }
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? today,
+      initialDate: initialDate,
       firstDate: startOfToday,
       lastDate: today.add(const Duration(days: 180)),
       locale: const Locale('es', 'ES'),
-      selectableDayPredicate: (date) {
-        // Only Monday–Friday and not a holiday
-        if (date.weekday < DateTime.monday || date.weekday > DateTime.friday) {
-          return false;
-        }
-        final normalized = DateTime.utc(date.year, date.month, date.day);
-        return !holidays.contains(normalized);
-      },
+      selectableDayPredicate: isDateSelectable,
     );
 
     if (picked != null && picked != _selectedDate) {
@@ -212,47 +240,52 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
     });
 
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('No authenticated user found.');
+      }
+
       // Determine appointment type based on the selected product
       AppointmentType apptType;
       Duration duration;
-      // Use _selectedProduct! (safe because we checked for null above)
       if (_selectedProduct! is Consultation) {
         apptType = AppointmentType.consultation;
         duration = (_selectedProduct! as Consultation).typicalDuration;
       } else if (_selectedProduct! is DoseBundle) {
         apptType = AppointmentType.packageApplication;
-        duration = const Duration(minutes: 45); // Example duration
+        duration = const Duration(minutes: 45);
       } else {
         apptType = AppointmentType.vaccination;
-        duration = const Duration(minutes: 30); // Example duration
+        duration = const Duration(minutes: 30);
       }
 
       // Create the new Appointment object
       final newAppointment = Appointment(
-        id: const Uuid().v4(), // Generate unique ID
-        patientId: 'current_patient_id', // TODO: Get actual patient ID
-        patientName: 'Paciente Ejemplo', // TODO: Get actual patient name
+        id: const Uuid().v4(),
+        patientId: user.uid,
+        patientName: (user.displayName?.trim().isNotEmpty == true
+                ? user.displayName
+                : null) ??
+            (user.email?.trim().isNotEmpty == true ? user.email : null) ??
+            'Paciente desconocido',
         doctorId: 'placeholder_doctor_id',
         doctorName: null,
         doctorSpecialty: null,
-        dateTime: _selectedTimeSlot!, // Use the selected time slot
+        dateTime: _selectedTimeSlot!,
         duration: duration,
         locationId: _selectedLocation!.id,
         locationName: _selectedLocation!.name,
         locationAddress: _selectedLocation!.address,
         type: apptType,
-        productIds: [_selectedProduct!.id], // Use the selected product ID
+        productIds: [_selectedProduct!.id],
         status: AppointmentStatus.scheduled,
         createdAt: DateTime.now(),
-        createdByUserId:
-            'current_user_id', // TODO: Get actual logged-in user ID
-        notes: null, // Add notes field later if needed
+        createdByUserId: user.uid,
+        notes: null,
       );
 
-      // Add to the dummy repository
-      _appointmentRepository.addAppointment(newAppointment);
+      await _appointmentRepository.createAppointment(newAppointment);
 
-      // Show success and navigate back
       Fluttertoast.showToast(
           msg: '¡Cita agendada con éxito!',
           toastLength: Toast.LENGTH_SHORT,
@@ -260,8 +293,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
           backgroundColor: Theme.of(context).colorScheme.primary,
           textColor: Theme.of(context).colorScheme.onPrimary,
           fontSize: 18.0);
-      Navigator.of(context)
-          .popUntil((route) => route.isFirst); // Go back to first layer
+      Navigator.of(context).popUntil((route) => route.isFirst);
       Provider.of<BottomNavigationBarProvider>(context, listen: false)
           .navigateTo(2);
     } catch (e) {

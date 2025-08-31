@@ -4,10 +4,10 @@ import 'package:vaq/assets/components/package_card.dart';
 import 'package:vaq/assets/components/search_and_filter_bar.dart'; // Import reusable SearchAndFilterBar
 import 'package:vaq/assets/data_classes/appointment.dart'; // Import Appointment class
 import 'package:vaq/assets/data_classes/product.dart'; // Import Product class
-import 'package:vaq/assets/dummy_data/appointments.dart'; // Import dummy appointments
-import 'package:vaq/assets/dummy_data/packages.dart'; // Import dummy packages
+
+import 'package:vaq/services/dynamic_product_repository.dart';
 import 'package:vaq/assets/components/article_card.dart';
-import 'package:vaq/assets/dummy_data/articles.dart';
+import 'package:vaq/services/dynamic_article_repository.dart';
 import 'package:vaq/assets/data_classes/article.dart';
 import 'package:provider/provider.dart'; // Import Provider
 import 'package:vaq/assets/data_classes/user.dart'; // Import the User class
@@ -16,34 +16,51 @@ import 'package:vaq/screens/history/history.dart';
 import 'package:vaq/screens/profile/profile.dart'; // Import the Profile screen
 import 'package:vaq/screens/new_appointment/new_appointment.dart';
 import 'package:vaq/screens/settings/settings.dart'; // Import the new appointment screen
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 class Home extends StatelessWidget {
+  Future<List<Appointment>> _fetchAppointments() async {
+    try {
+      final uid = firebase_auth.FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) {
+        print('No authenticated user.');
+        return [];
+      }
+
+      final fs = FirebaseFirestore.instance;
+
+      // Run two targeted queries (patient OR doctor) and merge results.
+      // This prevents a collection-wide read that Firestore would reject
+      // because some docs do not belong to the current user.
+      final results = await Future.wait([
+        fs.collection('appointments').where('patientId', isEqualTo: uid).get(),
+        fs.collection('appointments').where('doctorId', isEqualTo: uid).get(),
+      ]);
+
+      // De-duplicate by document id in case the user is both patient and doctor.
+      final Map<String, QueryDocumentSnapshot<Map<String, dynamic>>>
+          uniqueDocs = {};
+      for (final snap in results) {
+        for (final doc in snap.docs) {
+          uniqueDocs[doc.id] = doc;
+        }
+      }
+
+      return uniqueDocs.values
+          .map((doc) => Appointment.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      print('Error fetching appointments: $e');
+      return [];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     // --- Data Fetching and Processing ---
-    // Get Packages (Vaccination Programs) – take first 2 for display
-    final VaccinationProgramRepository programRepository =
-        VaccinationProgramRepository();
-    final List<VaccinationProgram> allPrograms =
-        programRepository.getPrograms();
-    final List<VaccinationProgram> featuredPackages =
-        allPrograms.take(2).toList();
-
-    // Get Appointments (Fetch, filter upcoming, sort, take top 3)
-    final AppointmentRepository appointmentRepository = AppointmentRepository();
-    final List<Appointment> allAppointments =
-        appointmentRepository.getAppointments();
-    final List<Appointment> nextThreeAppointments = allAppointments
-        .where((appt) => appt.isUpcoming) // Filter for upcoming
-        .toList()
-      ..sort((a, b) => a.dateTime.compareTo(b.dateTime)) // Sort by date
-      ..take(3); // Take the first 3
-
-    // Get the three most recent articles
-    List<Article> recentArticles = [...dummyArticles]
-      ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
-    recentArticles = recentArticles.take(3).toList();
+    // Note: We're using Firebase data for all content instead of dummy data
 
     // --- Build Method ---
     return Padding(
@@ -127,24 +144,36 @@ class Home extends StatelessWidget {
 
           // Featured Products/Packages
           const Text(
-            'Paquetes Destacados', // Changed title
+            'Paquetes Destacados',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 15),
-          if (featuredPackages.isEmpty)
-            const Text('No hay paquetes destacados disponibles.')
-          else
-            ListView.separated(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: featuredPackages.length,
-              itemBuilder: (context, index) {
-                // Returns the card, which will now size itself
-                return PackageCard(program: featuredPackages[index]);
-              },
-              separatorBuilder: (context, index) => const SizedBox(height: 15),
-            ),
+          FutureBuilder<List<VaccinationProgram>>(
+            future: DynamicProductRepository().getPackages(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasError) {
+                return const Center(
+                    child: Text('Error al cargar los paquetes'));
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Text('No hay paquetes destacados disponibles.');
+              }
+
+              final packages = snapshot.data!.take(2).toList();
+              return ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: packages.length,
+                itemBuilder: (context, index) {
+                  return PackageCard(program: packages[index]);
+                },
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 15),
+              );
+            },
+          ),
 
           const SizedBox(height: 10), // Spacing before button
 
@@ -169,19 +198,32 @@ class Home extends StatelessWidget {
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 15),
-          if (recentArticles.isEmpty)
-            const Text('No hay artículos recientes disponibles.')
-          else
-            ListView.separated(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: recentArticles.length,
-              itemBuilder: (context, index) {
-                return ArticleCard(article: recentArticles[index]);
-              },
-              separatorBuilder: (context, index) => const SizedBox(height: 15),
-            ),
+          FutureBuilder<List<Article>>(
+            future: DynamicArticleRepository().getRecentArticles(3),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasError) {
+                return const Center(
+                    child: Text('Error al cargar los artículos'));
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Text('No hay artículos recientes disponibles.');
+              }
+
+              final articles = snapshot.data!;
+              return ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: articles.length,
+                itemBuilder: (context, index) {
+                  return ArticleCard(article: articles[index]);
+                },
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 15),
+              );
+            },
+          ),
           const SizedBox(height: 30),
 
           // --- Appointments Section (Rewritten) ---
@@ -191,24 +233,34 @@ class Home extends StatelessWidget {
           ),
           const SizedBox(height: 15), // Adjusted spacing
 
-          if (nextThreeAppointments.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10.0),
-              child: Text('No tienes citas programadas próximamente.'),
-            )
-          else
-            // Display the next 1-3 appointments using AppointmentCard
-            ListView.separated(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: nextThreeAppointments.length,
-              itemBuilder: (context, index) {
-                return AppointmentCard(
-                    appointment: nextThreeAppointments[index]);
-              },
-              separatorBuilder: (context, index) => const SizedBox(height: 15),
-            ),
+          FutureBuilder<List<Appointment>>(
+            future: _fetchAppointments(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasError) {
+                return const Center(child: Text('Error al cargar las citas'));
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10.0),
+                  child: Text('No tienes citas programadas próximamente.'),
+                );
+              }
+
+              final appointments = snapshot.data!;
+              return ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: appointments.length,
+                itemBuilder: (context, index) {
+                  return AppointmentCard(appointment: appointments[index]);
+                },
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 15),
+              );
+            },
+          ),
 
           const SizedBox(height: 20), // Spacing before button
 

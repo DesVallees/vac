@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart'; // Import TableCalendar specifics
 import 'package:vaq/assets/components/appointment_card.dart';
 import 'package:vaq/assets/data_classes/appointment.dart';
-import 'package:vaq/assets/dummy_data/appointments.dart';
+
 import 'package:collection/collection.dart'; // Import for groupBy
 import 'package:intl/intl.dart'; // <-- Add this line
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 // --- Schedule Widget (Now StatefulWidget) ---
 class Schedule extends StatefulWidget {
@@ -18,7 +20,6 @@ class Schedule extends StatefulWidget {
 class _ScheduleState extends State<Schedule> {
   // State variables
   late final List<Appointment> _allAppointments;
-  List<Appointment> _filteredAppointments = [];
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   Map<DateTime, List<Appointment>> _events = {};
@@ -27,16 +28,22 @@ class _ScheduleState extends State<Schedule> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay; // Select today initially
+    _loadAppointments();
+  }
 
-    // 1. Load all appointments
-    final AppointmentRepository appointmentRepository = AppointmentRepository();
-    _allAppointments = appointmentRepository.getAppointments();
+  Future<void> _loadAppointments() async {
+    try {
+      // 1. Load all appointments
+      _allAppointments = await _fetchAppointments();
 
-    // 2. Prepare events map for calendar markers
-    _events = _groupAppointmentsByDate(_allAppointments);
+      // 2. Prepare events map for calendar markers
+      _events = _groupAppointmentsByDate(_allAppointments);
 
-    // 3. Apply initial filter based on the initially selected day
-    _filterAppointmentsForSelectedDay();
+      // 3. Apply initial filter based on the initially selected day
+      _filterAppointmentsForSelectedDay();
+    } catch (e) {
+      print('Error loading appointments: $e');
+    }
   }
 
   // Helper to group appointments by date (ignoring time) for eventLoader
@@ -64,7 +71,7 @@ class _ScheduleState extends State<Schedule> {
       final today = DateTime.now();
       final startOfToday = DateTime(today.year, today.month, today.day);
       setState(() {
-        _filteredAppointments = _allAppointments
+        _allAppointments
             .where((appt) => !appt.dateTime
                 .isBefore(startOfToday)) // On or after start of today
             .toList()
@@ -75,7 +82,7 @@ class _ScheduleState extends State<Schedule> {
       final startOfSelectedDay =
           DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
       setState(() {
-        _filteredAppointments = _allAppointments
+        _allAppointments
             .where((appt) => !appt.dateTime.isBefore(
                 startOfSelectedDay)) // On or after start of selected day
             .toList()
@@ -92,6 +99,40 @@ class _ScheduleState extends State<Schedule> {
         _focusedDay = focusedDay; // Update focused day as well
       });
       _filterAppointmentsForSelectedDay(); // Re-filter the list
+    }
+  }
+
+  Future<List<Appointment>> _fetchAppointments() async {
+    try {
+      final uid = firebase_auth.FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) {
+        print('No authenticated user.');
+        return [];
+      }
+
+      final fs = FirebaseFirestore.instance;
+
+      // Query only the appointments where the current user participates
+      final results = await Future.wait([
+        fs.collection('appointments').where('patientId', isEqualTo: uid).get(),
+        fs.collection('appointments').where('doctorId', isEqualTo: uid).get(),
+      ]);
+
+      // De-duplicate in case the same user is both patient and doctor
+      final Map<String, QueryDocumentSnapshot<Map<String, dynamic>>>
+          uniqueDocs = {};
+      for (final snap in results) {
+        for (final doc in snap.docs) {
+          uniqueDocs[doc.id] = doc;
+        }
+      }
+
+      return uniqueDocs.values
+          .map((doc) => Appointment.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      print('Error fetching appointments: $e');
+      return [];
     }
   }
 
@@ -126,34 +167,32 @@ class _ScheduleState extends State<Schedule> {
           const SizedBox(height: 15),
 
           // --- Dynamic List of Appointments ---
-          if (_filteredAppointments.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 20.0),
-              child: Center(
-                child: Text(
-                  _selectedDay == null
-                      ? 'No tienes citas programadas.'
-                      : 'No hay citas programadas para esta fecha o después.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 16,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ),
-              ),
-            )
-          else
-            ListView.separated(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _filteredAppointments.length,
-              itemBuilder: (context, index) {
-                // Use the dynamically filtered list
-                return AppointmentCard(
-                    appointment: _filteredAppointments[index]);
-              },
-              separatorBuilder: (context, index) => const SizedBox(height: 15),
-            ),
+          FutureBuilder<List<Appointment>>(
+            future: _fetchAppointments(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasError) {
+                return const Center(child: Text('Error al cargar las citas'));
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text('No hay citas disponibles'));
+              }
+
+              final appointments = snapshot.data!;
+              return ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: appointments.length,
+                itemBuilder: (context, index) {
+                  final appointment = appointments[index];
+                  return AppointmentCard(appointment: appointment);
+                },
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 15),
+              );
+            },
+          ),
 
           const SizedBox(height: 40), // Padding at the bottom
         ],
