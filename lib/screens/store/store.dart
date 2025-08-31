@@ -155,89 +155,95 @@ class _StoreState extends State<Store> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 30),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Tienda',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
+    return Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 30),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Tienda',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
 
-            // search & filters
-            SearchAndFilterBar(
-              onSearchChanged: _updateSearchTerm,
-              onFiltersChanged: _updateFilters,
-              availableFilters: _storeFilters,
-              initialFilters: _activeFilters,
-              initialSearchText: _searchTerm,
-            ),
-            const SizedBox(height: 20),
+              // search & filters
+              SearchAndFilterBar(
+                onSearchChanged: _updateSearchTerm,
+                onFiltersChanged: _updateFilters,
+                availableFilters: _storeFilters,
+                initialFilters: _activeFilters,
+                initialSearchText: _searchTerm,
+              ),
+              const SizedBox(height: 20),
 
-            // ────────── programs section ──────────
-            Text('Programas de Vacunación',
-                style: Theme.of(context).textTheme.titleLarge),
-            _filteredPrograms.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.only(top: 40),
-                    child: Center(
-                      child: Text(
-                        'No hay programas que coincidan con tu búsqueda o filtros.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+              // ────────── programs section ──────────
+              Text('Programas de Vacunación',
+                  style: Theme.of(context).textTheme.titleLarge),
+              _filteredPrograms.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 40),
+                      child: Center(
+                        child: Text(
+                          'No hay programas que coincidan con tu búsqueda o filtros.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
+                    )
+                  : ListView.separated(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _filteredPrograms.length,
+                      itemBuilder: (_, i) =>
+                          PackageCard(program: _filteredPrograms[i]),
+                      separatorBuilder: (_, __) => const SizedBox(height: 15),
                     ),
-                  )
-                : ListView.separated(
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _filteredPrograms.length,
-                    itemBuilder: (_, i) =>
-                        PackageCard(program: _filteredPrograms[i]),
-                    separatorBuilder: (_, __) => const SizedBox(height: 15),
-                  ),
 
-            const SizedBox(height: 30),
+              const SizedBox(height: 30),
 
-            // ────────── vaccines section ──────────
-            Text('Vacunas individuales',
-                style: Theme.of(context).textTheme.titleLarge),
-            _filteredVaccines.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.only(top: 40),
-                    child: Center(
-                      child: Text(
-                        'No se encontraron vacunas que coincidan con tu búsqueda o filtros.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+              // ────────── vaccines section ──────────
+              Text('Vacunas individuales',
+                  style: Theme.of(context).textTheme.titleLarge),
+              _filteredVaccines.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 40),
+                      child: Center(
+                        child: Text(
+                          'No se encontraron vacunas que coincidan con tu búsqueda o filtros.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
+                    )
+                  : ListView.separated(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _filteredVaccines.length,
+                      itemBuilder: (_, i) =>
+                          DetailedProductCard(product: _filteredVaccines[i]),
+                      separatorBuilder: (_, __) => const SizedBox(height: 15),
                     ),
-                  )
-                : ListView.separated(
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _filteredVaccines.length,
-                    itemBuilder: (_, i) =>
-                        DetailedProductCard(product: _filteredVaccines[i]),
-                    separatorBuilder: (_, __) => const SizedBox(height: 15),
-                  ),
 
-            const SizedBox(height: 50),
-          ],
+              const SizedBox(height: 50),
+            ],
+          ),
         ),
       ),
     );

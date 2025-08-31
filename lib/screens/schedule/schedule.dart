@@ -140,62 +140,64 @@ class _ScheduleState extends State<Schedule> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 30),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // --- Header ---
-          const Text(
-            'Agenda',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- Header ---
+            const Text(
+              'Agenda',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-          // --- Calendar Section ---
-          _buildCalendarSection(), // Calendar now uses state variables
-          const SizedBox(height: 30),
+            // --- Calendar Section ---
+            _buildCalendarSection(), // Calendar now uses state variables
+            const SizedBox(height: 30),
 
-          // --- Appointments Section Header (Dynamic Title) ---
-          Text(
-            _selectedDay == null || isSameDay(_selectedDay, DateTime.now())
-                ? 'Próximas Citas'
-                : 'Citas desde ${DateFormat.yMMMd('es_ES').format(_selectedDay!)}', // Show selected date
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 15),
+            // --- Appointments Section Header (Dynamic Title) ---
+            Text(
+              _selectedDay == null || isSameDay(_selectedDay, DateTime.now())
+                  ? 'Próximas Citas'
+                  : 'Citas desde ${DateFormat.yMMMd('es_ES').format(_selectedDay!)}', // Show selected date
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 15),
 
-          // --- Dynamic List of Appointments ---
-          FutureBuilder<List<Appointment>>(
-            future: _fetchAppointments(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasError) {
-                return const Center(child: Text('Error al cargar las citas'));
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text('No hay citas disponibles'));
-              }
+            // --- Dynamic List of Appointments ---
+            FutureBuilder<List<Appointment>>(
+              future: _fetchAppointments(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return const Center(child: Text('Error al cargar las citas'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No hay citas disponibles'));
+                }
 
-              final appointments = snapshot.data!;
-              return ListView.separated(
-                padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: appointments.length,
-                itemBuilder: (context, index) {
-                  final appointment = appointments[index];
-                  return AppointmentCard(appointment: appointment);
-                },
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 15),
-              );
-            },
-          ),
+                final appointments = snapshot.data!;
+                return ListView.separated(
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: appointments.length,
+                  itemBuilder: (context, index) {
+                    final appointment = appointments[index];
+                    return AppointmentCard(appointment: appointment);
+                  },
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 15),
+                );
+              },
+            ),
 
-          const SizedBox(height: 40), // Padding at the bottom
-        ],
+            const SizedBox(height: 40), // Padding at the bottom
+          ],
+        ),
       ),
     );
   }

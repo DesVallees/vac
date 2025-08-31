@@ -121,9 +121,7 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Container(
             key: ValueKey<int>(selectedIndex),
             alignment: Alignment.topCenter,
-            child: SingleChildScrollView(
-              child: SizedBox(width: double.infinity, child: page),
-            ),
+            child: SizedBox(width: double.infinity, child: page),
           ),
         ),
       ),
