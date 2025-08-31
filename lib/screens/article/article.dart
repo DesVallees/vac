@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:vaq/assets/data_classes/article.dart';
+import 'package:vaq/services/image_service.dart';
 
 /// Screen that renders the detail view of a single [Article].
 ///
@@ -65,8 +66,7 @@ class ArticleScreen extends StatelessWidget {
   }
 }
 
-/// Displays the hero image for the article. Uses [Image.network] if the URL is
-/// absolute, otherwise falls back to [Image.asset].
+/// Displays the hero image for the article using Firebase Storage.
 class _HeroImage extends StatelessWidget {
   const _HeroImage({required this.url});
 
@@ -76,38 +76,14 @@ class _HeroImage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (url.isEmpty) return const SizedBox.shrink();
 
-    final isNetwork = Uri.tryParse(url)?.isAbsolute ?? false;
-    final image = isNetwork
-        ? Image.network(
-            url,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) =>
-                const _FallbackImage(),
-          )
-        : Image.asset(
-            url,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) =>
-                const _FallbackImage(),
-          );
-
     return AspectRatio(
       aspectRatio: 16 / 9,
-      child: image,
-    );
-  }
-}
-
-/// Fallback hero displayed when the image cannot be loaded.
-class _FallbackImage extends StatelessWidget {
-  const _FallbackImage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: const Icon(Icons.broken_image_outlined),
+      child: ImageService.getNetworkImage(
+        fileName: url,
+        type: 'article',
+        fit: BoxFit.cover,
+        fallbackSize: 60.0,
+      ),
     );
   }
 }

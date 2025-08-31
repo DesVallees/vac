@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vaq/assets/data_classes/product.dart';
 import 'package:vaq/screens/product/package.dart';
+import 'package:vaq/services/image_service.dart';
 
 /// Card widget used to display a [VaccinationProgram] (i.e. a package) in the
 /// Store screen. Very similar to [DetailedProductCard] but tweaked for the
@@ -37,21 +38,11 @@ class PackageCard extends StatelessWidget {
             // --- Image Section ---
             AspectRatio(
               aspectRatio: 16 / 10,
-              child: Image.asset(
-                program.imageUrl,
+              child: ImageService.getNetworkImage(
+                fileName: program.imageUrl,
+                type: 'package',
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    child: Center(
-                      child: Icon(
-                        Icons.broken_image_outlined,
-                        color: theme.colorScheme.onSurfaceVariant,
-                        size: 40,
-                      ),
-                    ),
-                  );
-                },
+                fallbackSize: 40.0,
               ),
             ),
 

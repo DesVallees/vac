@@ -17,7 +17,7 @@ class Article {
   /// Full rich‑text/markdown/HTML body of the article.
   final String body;
 
-  /// URL or asset path to the hero image associated with the article.
+  /// Image file name from Firebase Storage for the hero image.
   final String heroImageUrl;
 
   /// Date when the article was first published.

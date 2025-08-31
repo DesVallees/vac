@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:vaq/assets/data_classes/product.dart';
 import 'package:vaq/screens/product/product.dart';
+import 'package:vaq/services/image_service.dart';
 
 class DetailedProductCard extends StatelessWidget {
   final Product product;
 
   const DetailedProductCard({super.key, required this.product});
+
+  /// Helper method to determine the product type for image folder resolution
+  String _getProductType(Product product) {
+    if (product is Vaccine) return 'vaccine';
+    if (product is DoseBundle) return 'bundle';
+    if (product is VaccinationProgram) return 'package';
+    if (product is Consultation) return 'consultation';
+    return 'default';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,22 +44,11 @@ class DetailedProductCard extends StatelessWidget {
             // --- Image Section ---
             AspectRatio(
               aspectRatio: 16 / 10,
-              child: Image.asset(
-                product.imageUrl,
+              child: ImageService.getNetworkImage(
+                fileName: product.imageUrl,
+                type: _getProductType(product),
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: Center(
-                      child: Icon(
-                        Icons.broken_image_outlined,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        size: 40,
-                      ),
-                    ),
-                  );
-                },
+                fallbackSize: 40.0,
               ),
             ),
 

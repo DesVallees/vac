@@ -12,7 +12,7 @@ abstract class Product {
   final double? priceAvacunar; // Optional alternative pricing
   final double? priceVita; // Optional alternative pricing
   final double? priceColsanitas; // Optional alternative pricing
-  final String imageUrl; // Path to the representative image
+  final String imageUrl; // Image file name from Firebase Storage
   final List<String>
       applicableDoctors; // Specialties that can administer/perform
   final int

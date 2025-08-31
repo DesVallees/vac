@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data_classes/article.dart';
 import '../../screens/article/article.dart';
+import '../../services/image_service.dart';
 
 /// Compact card widget that shows a preview of an [Article].
 ///
@@ -75,7 +76,7 @@ class ArticleCard extends StatelessWidget {
   }
 }
 
-/// Displays a thumbnail for the article (network/asset agnostic).
+/// Displays a thumbnail for the article using Firebase Storage.
 class _Thumbnail extends StatelessWidget {
   const _Thumbnail({required this.url});
 
@@ -85,36 +86,14 @@ class _Thumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     if (url.isEmpty) return const SizedBox.shrink();
 
-    final isNetwork = Uri.tryParse(url)?.isAbsolute ?? false;
-    final image = isNetwork
-        ? Image.network(
-            url,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stack) => const _FallbackImage(),
-          )
-        : Image.asset(
-            url,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stack) => const _FallbackImage(),
-          );
-
     return AspectRatio(
       aspectRatio: 16 / 9,
-      child: image,
-    );
-  }
-}
-
-/// Generic fallback shown when an article image fails to load.
-class _FallbackImage extends StatelessWidget {
-  const _FallbackImage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: const Icon(Icons.broken_image_outlined),
+      child: ImageService.getNetworkImage(
+        fileName: url,
+        type: 'article',
+        fit: BoxFit.cover,
+        fallbackSize: 40.0,
+      ),
     );
   }
 }

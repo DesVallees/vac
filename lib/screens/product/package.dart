@@ -3,6 +3,7 @@ import 'package:vaq/assets/data_classes/product.dart';
 import 'package:vaq/assets/components/detailed_product_card.dart';
 import 'package:vaq/services/dynamic_product_repository.dart';
 import 'package:vaq/screens/new_appointment/new_appointment.dart';
+import 'package:vaq/services/image_service.dart';
 
 /// Displays the timeline‑style detail page for a [VaccinationProgram].
 ///
@@ -70,25 +71,11 @@ class PackageDetailPage extends StatelessWidget {
                       background: Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.asset(
-                            program.imageUrl,
+                          ImageService.getNetworkImage(
+                            fileName: program.imageUrl,
+                            type: 'package',
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHigh,
-                                child: Center(
-                                  child: Icon(
-                                    Icons.image_not_supported_outlined,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                    size: 60,
-                                  ),
-                                ),
-                              );
-                            },
+                            fallbackSize: 60.0,
                           ),
                           Container(
                             decoration: BoxDecoration(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vaq/services/image_service.dart';
 
 class ProductCard extends StatelessWidget {
   final String imageUrl;
@@ -28,11 +29,13 @@ class ProductCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(15),
-            child: Image.asset(
-              imageUrl,
-              height: 60,
-              width: 60,
+            child: ImageService.getNetworkImage(
+              fileName: imageUrl,
+              type: 'default',
               fit: BoxFit.cover,
+              width: 60,
+              height: 60,
+              fallbackSize: 30.0,
             ),
           ),
           const SizedBox(width: 15),

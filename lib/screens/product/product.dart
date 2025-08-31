@@ -4,11 +4,21 @@ import 'package:vaq/screens/new_appointment/new_appointment.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
 import 'package:vaq/services/dynamic_product_repository.dart';
 import 'package:vaq/assets/components/detailed_product_card.dart';
+import 'package:vaq/services/image_service.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
 
   const ProductDetailPage({super.key, required this.product});
+
+  /// Helper method to determine the product type for image folder resolution
+  String _getProductType(Product product) {
+    if (product is Vaccine) return 'vaccine';
+    if (product is DoseBundle) return 'bundle';
+    if (product is VaccinationProgram) return 'package';
+    if (product is Consultation) return 'consultation';
+    return 'default';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,25 +64,11 @@ class ProductDetailPage extends StatelessWidget {
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.asset(
-                        product.imageUrl,
+                      ImageService.getNetworkImage(
+                        fileName: product.imageUrl,
+                        type: _getProductType(product),
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHigh,
-                            child: Center(
-                              child: Icon(
-                                Icons.image_not_supported_outlined,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                                size: 60,
-                              ),
-                            ),
-                          );
-                        },
+                        fallbackSize: 60.0,
                       ),
                       Container(
                         decoration: BoxDecoration(

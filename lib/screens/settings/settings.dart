@@ -4,7 +4,6 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vaq/screens/profile/edit_profile.dart';
-import 'package:vaq/utils/migration_runner.dart'; // For opening links
 // Import User class if needed for context
 
 class SettingsScreen extends StatefulWidget {
