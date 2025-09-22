@@ -14,6 +14,8 @@ enum AppointmentStatus {
   rescheduled, // Optional: If the appointment was moved
 }
 
+enum PaymentStatus { none, pending, paid, failed }
+
 /// Defines the primary purpose or type of the appointment.
 enum AppointmentType {
   vaccination, // Primarily for administering one or more vaccines/products
@@ -51,6 +53,8 @@ class Appointment {
   final String?
       createdByUserId; // Optional: ID of the user who booked (if different from patient, e.g., parent)
   final DateTime? lastUpdatedAt; // Optional: Timestamp of the last modification
+  final PaymentStatus paymentStatus; // Payment status for the appointment
+  final String? paymentRef; // Optional: Payment reference ID
 
   Appointment({
     required this.id,
@@ -71,6 +75,8 @@ class Appointment {
     required this.createdAt,
     this.createdByUserId,
     this.lastUpdatedAt,
+    this.paymentStatus = PaymentStatus.none,
+    this.paymentRef,
   });
 
   // --- Potential Helper Methods (Examples) ---
@@ -120,6 +126,18 @@ class Appointment {
         }
       }
 
+      PaymentStatus parsePaymentStatus(dynamic value) {
+        if (value == null) return PaymentStatus.none;
+        try {
+          return PaymentStatus.values.firstWhere(
+            (e) => e.toString() == value.toString(),
+            orElse: () => PaymentStatus.none,
+          );
+        } catch (e) {
+          return PaymentStatus.none;
+        }
+      }
+
       // Helper function to parse date from various formats
       DateTime parseDate(dynamic dateData) {
         if (dateData == null) return DateTime.now();
@@ -156,6 +174,8 @@ class Appointment {
         createdAt: parseDate(data['createdAt']),
         createdByUserId: data['createdByUserId'],
         lastUpdatedAt: parseDate(data['lastUpdatedAt']),
+        paymentStatus: parsePaymentStatus(data['paymentStatus']),
+        paymentRef: data['paymentRef'],
       );
     } catch (e) {
       // Return a default appointment if parsing fails
@@ -170,6 +190,7 @@ class Appointment {
         type: AppointmentType.consultation,
         status: AppointmentStatus.scheduled,
         createdAt: DateTime.now(),
+        paymentStatus: PaymentStatus.none,
       );
     }
   }
@@ -196,6 +217,8 @@ class Appointment {
       'createdByUserId': createdByUserId,
       'lastUpdatedAt':
           lastUpdatedAt != null ? Timestamp.fromDate(lastUpdatedAt!) : null,
+      'paymentStatus': paymentStatus.toString(),
+      'paymentRef': paymentRef,
     };
   }
 }

@@ -10,9 +10,12 @@ import 'package:vaq/assets/data_classes/location.dart';
 import 'package:vaq/services/dynamic_location_repository.dart';
 import 'package:vaq/services/dynamic_appointment_repository.dart';
 import 'package:vaq/services/dynamic_product_repository.dart';
+import 'package:vaq/screens/payment/payment_form.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:vaq/assets/helpers/holidays.dart';
 import 'package:vaq/providers/bottom_navigation_bar_provider.dart';
+
+enum PaymentMethod { inPerson, payNow }
 
 class ScheduleAppointmentScreen extends StatefulWidget {
   // Make product optional
@@ -39,6 +42,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
   bool _isLoading = false;
   bool _isProductSelectionMode =
       false; // Flag to know if we need to select a product
+  PaymentMethod _paymentMethod = PaymentMethod.inPerson;
 
   // Repositories
   final DynamicAppointmentRepository _appointmentRepository =
@@ -259,6 +263,14 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
         duration = const Duration(minutes: 30);
       }
 
+      // Determine payment status based on payment method
+      PaymentStatus paymentStatus;
+      if (_paymentMethod == PaymentMethod.inPerson) {
+        paymentStatus = PaymentStatus.none;
+      } else {
+        paymentStatus = PaymentStatus.pending;
+      }
+
       // Create the new Appointment object
       final newAppointment = Appointment(
         id: const Uuid().v4(),
@@ -282,17 +294,61 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
         createdAt: DateTime.now(),
         createdByUserId: user.uid,
         notes: null,
+        paymentStatus: paymentStatus,
       );
 
       await _appointmentRepository.createAppointment(newAppointment);
 
-      Fluttertoast.showToast(
-          msg: '¡Cita agendada con éxito!',
-          toastLength: Toast.LENGTH_SHORT,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          textColor: Theme.of(context).colorScheme.onPrimary,
-          fontSize: 18.0);
+      // Handle payment if payNow is selected
+      if (_paymentMethod == PaymentMethod.payNow) {
+        try {
+          // Calculate amount (using product price or default)
+          final amountCOP = _selectedProduct!.price ?? 0.0;
+
+          // Navigate to payment form
+          final paymentResult = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PaymentFormScreen(
+                appointment: newAppointment,
+                amount: amountCOP,
+              ),
+            ),
+          );
+
+          if (paymentResult == true) {
+            Fluttertoast.showToast(
+              msg: '¡Cita agendada y pago realizado con éxito!',
+              toastLength: Toast.LENGTH_LONG,
+              gravity: ToastGravity.BOTTOM,
+            );
+          } else {
+            Fluttertoast.showToast(
+              msg: '¡Cita agendada! El pago se puede realizar más tarde.',
+              toastLength: Toast.LENGTH_LONG,
+              gravity: ToastGravity.BOTTOM,
+            );
+          }
+        } catch (paymentError) {
+          print('Payment error: $paymentError');
+          Fluttertoast.showToast(
+            msg: '¡Cita agendada! El pago se puede realizar más tarde.',
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+          );
+        }
+      } else {
+        // In-person payment - show success message
+        Fluttertoast.showToast(
+            msg: '¡Cita agendada con éxito!',
+            toastLength: Toast.LENGTH_SHORT,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            textColor: Theme.of(context).colorScheme.onPrimary,
+            fontSize: 18.0);
+      }
+
+      // Navigate to appointments screen
       Navigator.of(context).popUntil((route) => route.isFirst);
       Provider.of<BottomNavigationBarProvider>(context, listen: false)
           .navigateTo(2);
@@ -379,7 +435,17 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
                 const SizedBox(height: 32),
               ],
 
-              // 5. Submit Button
+              // 5. Payment Method Selection (only if time slot is selected)
+              if (_selectedTimeSlot != null) ...[
+                Text('Método de Pago',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                _buildPaymentMethodSection(),
+                const SizedBox(height: 32),
+              ],
+
+              // 6. Submit Button
               Center(
                 child: _isLoading
                     ? const CircularProgressIndicator()
@@ -586,6 +652,68 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
       }).toList(),
       onChanged: _onTimeSlotSelected, // Use the dedicated handler
       validator: (value) => value == null ? 'Campo requerido' : null,
+    );
+  }
+
+  Widget _buildPaymentMethodSection() {
+    return Column(
+      children: [
+        RadioListTile<PaymentMethod>(
+          title: const Text('Pagar en la clínica'),
+          value: PaymentMethod.inPerson,
+          groupValue: _paymentMethod,
+          onChanged: (PaymentMethod? value) {
+            setState(() {
+              _paymentMethod = value!;
+            });
+          },
+          activeColor: Theme.of(context).colorScheme.primary,
+        ),
+        RadioListTile<PaymentMethod>(
+          title: const Text('Pagar ahora'),
+          value: PaymentMethod.payNow,
+          groupValue: _paymentMethod,
+          onChanged: (PaymentMethod? value) {
+            setState(() {
+              _paymentMethod = value!;
+            });
+          },
+          activeColor: Theme.of(context).colorScheme.primary,
+        ),
+        // Collapsible section for payNow
+        if (_paymentMethod == PaymentMethod.payNow) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color:
+                  Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.lock_outline,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Pagarás ahora de forma segura sin salir de la app',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

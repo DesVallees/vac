@@ -316,9 +316,13 @@ class ProductDetailPage extends StatelessWidget {
           // Fetch full product objects based on IDs
           final allProducts = snapshot.data!;
           final includedProducts = package.includedProductIds
-              .map((id) => allProducts.firstWhere(
-                    (p) => p.id == id,
-                  ))
+              .map((id) {
+                try {
+                  return allProducts.firstWhere((p) => p.id == id);
+                } catch (_) {
+                  return null; // Skip if product not found
+                }
+              })
               .whereType<Product>()
               .toList();
 

@@ -116,6 +116,8 @@ class DynamicAppointmentRepository {
             ? Timestamp.fromDate(appointmentToSave.lastUpdatedAt!)
             : null,
         'notes': appointmentToSave.notes,
+        'paymentStatus': appointmentToSave.paymentStatus.toString(),
+        'paymentRef': appointmentToSave.paymentRef,
       });
 
       print('✅ Appointment created: ${appointmentToSave.id}');

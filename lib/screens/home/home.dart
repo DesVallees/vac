@@ -549,7 +549,7 @@ class Header extends StatelessWidget {
         return 'usuario';
       }
       final parts = currentUser.displayName!.trim().split(' ');
-      return parts.isNotEmpty ? parts.first : currentUser.displayName!;
+      return parts.isNotEmpty ? parts.first : 'usuario';
     }
 
     return Row(

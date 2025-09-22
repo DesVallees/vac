@@ -69,17 +69,21 @@ class DetailedProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    product.description,
+                    product.description.isNotEmpty
+                        ? product.description
+                        : 'Sin descripción disponible',
                     style: textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                       height: 1.3,
                     ),
-                    // maxLines: 3, // Remove or adjust if you want it fully dynamic
-                    // overflow: TextOverflow.ellipsis, // Keep ellipsis if maxLines is set
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 12), // Add space before price
                   Text(
-                    '\$${product.price?.toStringAsFixed(2)}',
+                    product.price != null
+                        ? '\$${product.price!.toStringAsFixed(2)}'
+                        : 'Precio no disponible',
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.primary,

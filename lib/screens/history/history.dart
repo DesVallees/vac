@@ -266,8 +266,9 @@ class MedicalHistoryScreen extends StatelessWidget {
                 leading: Icon(Icons.calendar_today_outlined,
                     color: theme.colorScheme.error),
                 title: const Text('Última Menstruación'),
-                subtitle: Text(
-                    formatDateTime(history.obGynHistory!.lastMenstrualPeriod)),
+                subtitle: Text(history.obGynHistory!.lastMenstrualPeriod != null
+                    ? formatDateTime(history.obGynHistory!.lastMenstrualPeriod!)
+                    : 'No especificado'),
               ),
               ListTile(
                 leading:
@@ -305,15 +306,17 @@ class MedicalHistoryScreen extends StatelessWidget {
                 leading: Icon(Icons.science_outlined,
                     color: theme.colorScheme.error),
                 title: const Text('Último Papanicolaou'),
-                subtitle: Text(
-                    formatDateTime(history.obGynHistory!.lastPapSmearDate)),
+                subtitle: Text(history.obGynHistory!.lastPapSmearDate != null
+                    ? formatDateTime(history.obGynHistory!.lastPapSmearDate!)
+                    : 'No especificado'),
               ),
               ListTile(
                 leading: Icon(Icons.medical_information,
                     color: theme.colorScheme.error),
                 title: const Text('Última Mamografía'),
-                subtitle: Text(
-                    formatDateTime(history.obGynHistory!.lastMammogramDate)),
+                subtitle: Text(history.obGynHistory!.lastMammogramDate != null
+                    ? formatDateTime(history.obGynHistory!.lastMammogramDate!)
+                    : 'No especificado'),
               ),
               const Divider(height: 30),
             ],
@@ -336,8 +339,10 @@ class MedicalHistoryScreen extends StatelessWidget {
               leading:
                   Icon(Icons.update_outlined, color: theme.colorScheme.outline),
               title: const Text('Última Actualización'),
-              subtitle: Text(formatDateTime(history.lastUpdated,
-                  format: 'dd/MM/yyyy HH:mm')),
+              subtitle: Text(history.lastUpdated != null
+                  ? formatDateTime(history.lastUpdated!,
+                      format: 'dd/MM/yyyy HH:mm')
+                  : 'No especificado'),
             ),
             const SizedBox(height: 20), // Add some space at the bottom
           ],

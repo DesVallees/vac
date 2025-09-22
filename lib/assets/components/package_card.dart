@@ -63,7 +63,9 @@ class PackageCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    program.description,
+                    program.description.isNotEmpty
+                        ? program.description
+                        : 'Sin descripción disponible',
                     style: textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                       height: 1.3,

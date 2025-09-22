@@ -8,7 +8,6 @@ import 'package:vaq/screens/product/product.dart';
 import 'package:vaq/screens/product/package.dart';
 import 'package:vaq/screens/article/article.dart';
 import 'package:vaq/screens/new_appointment/new_appointment.dart';
-import 'package:vaq/screens/store/store.dart';
 import 'package:vaq/screens/history/history.dart';
 import 'package:vaq/screens/profile/profile.dart';
 

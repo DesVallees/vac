@@ -115,6 +115,7 @@ class VaccinationProgram extends Product {
     required super.name,
     required super.commonName,
     required super.description,
+    super.price,
     super.priceAvacunar,
     super.priceVita,
     super.priceColsanitas,

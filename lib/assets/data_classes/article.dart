@@ -62,8 +62,9 @@ class Article {
         updatedAt: json['updatedAt'] != null
             ? DateTime.parse(json['updatedAt'] as String)
             : null,
-        category: ArticleCategory.values
-            .firstWhere((c) => c.name == json['category']),
+        category: ArticleCategory.values.firstWhere(
+            (c) => c.name == json['category'],
+            orElse: () => ArticleCategory.news),
         tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? const [],
         author: json['author'] as String,
       );

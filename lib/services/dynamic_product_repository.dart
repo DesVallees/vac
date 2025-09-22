@@ -185,6 +185,7 @@ class DynamicProductRepository {
           name: data['name'] ?? '',
           commonName: data['commonName'] ?? '',
           description: data['description'] ?? '',
+          price: (data['price'] as num?)?.toDouble(),
           priceAvacunar: (data['priceAvacunar'] as num?)?.toDouble(),
           priceVita: (data['priceVita'] as num?)?.toDouble(),
           priceColsanitas: (data['priceColsanitas'] as num?)?.toDouble(),

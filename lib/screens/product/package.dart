@@ -36,11 +36,49 @@ class PackageDetailPage extends StatelessWidget {
           // Fetch dose bundles from the repo and keep the order defined by the program list
           final allBundles = snapshot.data!;
           final bundles = program.includedDoseBundles
-              .map((id) => allBundles.firstWhere(
-                    (b) => b.id == id,
-                  ))
+              .map((id) {
+                try {
+                  return allBundles.firstWhere((b) => b.id == id);
+                } catch (_) {
+                  return null; // Skip if bundle not found
+                }
+              })
               .whereType<DoseBundle>()
               .toList();
+
+          // Show empty state if no bundles found
+          if (bundles.isEmpty) {
+            return Scaffold(
+              appBar: AppBar(
+                title: Text(program.commonName),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              ),
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No hay paquetes disponibles',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Este programa de vacunación no tiene paquetes configurados.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
 
           return Scaffold(
             body: NestedScrollView(
@@ -176,7 +214,9 @@ class PackageDetailPage extends StatelessWidget {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                program.description,
+                                program.description.isNotEmpty
+                                    ? program.description
+                                    : 'Sin descripción disponible',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                               // Special indications (optional)
@@ -201,17 +241,19 @@ class PackageDetailPage extends StatelessWidget {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            ScheduleAppointmentScreen(
-                                          product: bundles.first,
-                                        ),
-                                      ),
-                                    );
-                                  },
+                                  onPressed: bundles.isNotEmpty
+                                      ? () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  ScheduleAppointmentScreen(
+                                                product: bundles.first,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      : null,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor:
                                         Theme.of(context).colorScheme.primary,
@@ -268,16 +310,19 @@ class PackageDetailPage extends StatelessWidget {
                           child: SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ScheduleAppointmentScreen(
-                                      product: bundles.first,
-                                    ),
-                                  ),
-                                );
-                              },
+                              onPressed: bundles.isNotEmpty
+                                  ? () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              ScheduleAppointmentScreen(
+                                            product: bundles.first,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor:
                                     Theme.of(context).colorScheme.primary,
