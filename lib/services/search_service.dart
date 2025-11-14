@@ -83,12 +83,9 @@ class SearchService {
         product.commonName.toLowerCase().contains(query) ||
         product.description.toLowerCase().contains(query) ||
         (product is Vaccine &&
-            (product as Vaccine)
-                .targetDiseases
-                .toLowerCase()
-                .contains(query)) ||
+            product.targetDiseases.toLowerCase().contains(query)) ||
         (product is Vaccine &&
-            (product as Vaccine).manufacturer.toLowerCase().contains(query));
+            product.manufacturer.toLowerCase().contains(query));
   }
 
   /// Check if an article matches the search query

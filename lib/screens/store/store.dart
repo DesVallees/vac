@@ -104,7 +104,7 @@ class _StoreState extends State<Store> {
   void _applyFilters() {
     final q = _searchTerm.toLowerCase();
 
-    bool _typeSelected(String v) {
+    bool typeSelected(String v) {
       final selected = _activeFilters['productType'] as List<dynamic>;
       return selected.isEmpty || selected.contains(v);
     }
@@ -119,7 +119,7 @@ class _StoreState extends State<Store> {
           v.manufacturer.toLowerCase().contains(q);
       if (!matchesSearch) return false;
 
-      if (!_typeSelected('vaccine')) return false;
+      if (!typeSelected('vaccine')) return false;
 
       final price = _activeFilters['priceRange'] as RangeValues;
       if (v.price != null) {
@@ -140,7 +140,7 @@ class _StoreState extends State<Store> {
           p.description.toLowerCase().contains(q);
       if (!matchesSearch) return false;
 
-      if (!_typeSelected('program')) return false;
+      if (!typeSelected('program')) return false;
 
       final age = _activeFilters['ageRange'] as RangeValues;
       if (p.minAge > age.end || p.maxAge < age.start) return false;
@@ -149,6 +149,50 @@ class _StoreState extends State<Store> {
     }).toList();
 
     setState(() {});
+  }
+
+  Widget _buildSectionHeader(
+      ThemeData theme, String title, String subtitle, IconData icon) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: theme.colorScheme.onSecondaryContainer,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // ───────────────────────────────────────────────────── UI ────────────────────
@@ -164,28 +208,86 @@ class _StoreState extends State<Store> {
 
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 30),
+        padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Tienda',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-
-              // search & filters
-              SearchAndFilterBar(
-                onSearchChanged: _updateSearchTerm,
-                onFiltersChanged: _updateFilters,
-                availableFilters: _storeFilters,
-                initialFilters: _activeFilters,
-                initialSearchText: _searchTerm,
+              // Header with icon and subtitle
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.store,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Tienda',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        Text(
+                          'Encuentra vacunas y productos médicos',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
+
+              // Search and filters container
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color:
+                          Theme.of(context).colorScheme.shadow.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: SearchAndFilterBar(
+                  onSearchChanged: _updateSearchTerm,
+                  onFiltersChanged: _updateFilters,
+                  availableFilters: _storeFilters,
+                  initialFilters: _activeFilters,
+                  initialSearchText: _searchTerm,
+                ),
+              ),
+              const SizedBox(height: 24),
 
               // ────────── programs section ──────────
-              Text('Programas de Vacunación',
-                  style: Theme.of(context).textTheme.titleLarge),
+              _buildSectionHeader(
+                Theme.of(context),
+                'Programas de Vacunación',
+                'Paquetes completos de vacunación',
+                Icons.vaccines,
+              ),
               _filteredPrograms.isEmpty
                   ? Padding(
                       padding: const EdgeInsets.only(top: 40),
@@ -214,8 +316,12 @@ class _StoreState extends State<Store> {
               const SizedBox(height: 30),
 
               // ────────── vaccines section ──────────
-              Text('Vacunas individuales',
-                  style: Theme.of(context).textTheme.titleLarge),
+              _buildSectionHeader(
+                Theme.of(context),
+                'Vacunas Individuales',
+                'Vacunas específicas por edad',
+                Icons.medication,
+              ),
               _filteredVaccines.isEmpty
                   ? Padding(
                       padding: const EdgeInsets.only(top: 40),

@@ -297,15 +297,14 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
         paymentStatus: paymentStatus,
       );
 
-      await _appointmentRepository.createAppointment(newAppointment);
-
       // Handle payment if payNow is selected
       if (_paymentMethod == PaymentMethod.payNow) {
         try {
           // Calculate amount (using product price or default)
           final amountCOP = _selectedProduct!.price ?? 0.0;
 
-          // Navigate to payment form
+          // Navigate to payment form BEFORE creating the appointment
+          if (!mounted) return;
           final paymentResult = await Navigator.push<bool>(
             context,
             MaterialPageRoute(
@@ -316,51 +315,62 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
             ),
           );
 
-          if (paymentResult == true) {
+          // Only create appointment if payment was successful
+          if (paymentResult == true && mounted) {
+            // Create the appointment after successful payment
+            await _appointmentRepository.createAppointment(newAppointment);
+            
             Fluttertoast.showToast(
               msg: '¡Cita agendada y pago realizado con éxito!',
               toastLength: Toast.LENGTH_LONG,
               gravity: ToastGravity.BOTTOM,
             );
+            
+            // Navigate to appointments screen
+            Navigator.of(context).popUntil((route) => route.isFirst);
+            Provider.of<BottomNavigationBarProvider>(context, listen: false)
+                .navigateTo(2);
           } else {
-            Fluttertoast.showToast(
-              msg: '¡Cita agendada! El pago se puede realizar más tarde.',
-              toastLength: Toast.LENGTH_LONG,
-              gravity: ToastGravity.BOTTOM,
-            );
+            // User cancelled payment - don't create appointment, just return to scheduling screen
+            // No need to do anything, just stay on the scheduling screen
+            return;
           }
         } catch (paymentError) {
           print('Payment error: $paymentError');
-          Fluttertoast.showToast(
-            msg: '¡Cita agendada! El pago se puede realizar más tarde.',
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
-          );
+          // If there's an error, don't create the appointment
+          // User can try again
+          return;
         }
       } else {
-        // In-person payment - show success message
-        Fluttertoast.showToast(
-            msg: '¡Cita agendada con éxito!',
-            toastLength: Toast.LENGTH_SHORT,
-            timeInSecForIosWeb: 1,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            textColor: Theme.of(context).colorScheme.onPrimary,
-            fontSize: 18.0);
+        // In-person payment - create appointment immediately
+        await _appointmentRepository.createAppointment(newAppointment);
+        
+        if (mounted) {
+          Fluttertoast.showToast(
+              msg: '¡Cita agendada con éxito!',
+              toastLength: Toast.LENGTH_SHORT,
+              timeInSecForIosWeb: 1,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              textColor: Theme.of(context).colorScheme.onPrimary,
+              fontSize: 18.0);
+          
+          // Navigate to appointments screen
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          Provider.of<BottomNavigationBarProvider>(context, listen: false)
+              .navigateTo(2);
+        }
       }
-
-      // Navigate to appointments screen
-      Navigator.of(context).popUntil((route) => route.isFirst);
-      Provider.of<BottomNavigationBarProvider>(context, listen: false)
-          .navigateTo(2);
     } catch (e) {
       print('Error scheduling appointment: $e');
-      Fluttertoast.showToast(
-          msg: 'Error al agendar la cita: $e',
-          toastLength: Toast.LENGTH_LONG,
-          timeInSecForIosWeb: 3,
-          backgroundColor: Theme.of(context).colorScheme.error,
-          textColor: Theme.of(context).colorScheme.onError,
-          fontSize: 16.0);
+      if (mounted) {
+        Fluttertoast.showToast(
+            msg: 'Error al agendar la cita: $e',
+            toastLength: Toast.LENGTH_LONG,
+            timeInSecForIosWeb: 3,
+            backgroundColor: Theme.of(context).colorScheme.error,
+            textColor: Theme.of(context).colorScheme.onError,
+            fontSize: 16.0);
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -686,8 +696,10 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color:
-                  Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withOpacity(0.3),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: Theme.of(context).colorScheme.outline.withOpacity(0.3),

@@ -1,31 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart'
-    as fb_auth; // Use alias for FirebaseAuth
-import 'package:vaq/assets/data_classes/user.dart'; // Import the User class
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import 'package:vaq/assets/data_classes/user.dart';
 import 'package:vaq/screens/auth/auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:vaq/assets/helpers/functions.dart';
 import 'package:vaq/screens/history/history.dart';
-import 'package:vaq/screens/settings/settings.dart'; // Import the Settings screen
-import 'package:vaq/screens/profile/edit_profile.dart'; // Import the Edit Profile screen
+import 'package:vaq/screens/settings/settings.dart';
+import 'package:vaq/screens/profile/edit_profile.dart';
 
-// Placeholder for the Medical Records screen
-class MedicalRecordsScreen extends StatelessWidget {
-  const MedicalRecordsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Historial Médico')),
-      body: const Center(
-          child: Text('Contenido del Historial Médico (Próximamente)')),
-    );
-  }
-}
-
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+class EnhancedProfileScreen extends StatelessWidget {
+  const EnhancedProfileScreen({super.key});
 
   // --- Sign Out Logic ---
   Future<void> _signOut(BuildContext context) async {
@@ -70,6 +55,8 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Mi Perfil'),
         backgroundColor: theme.colorScheme.primaryContainer,
+        foregroundColor: theme.colorScheme.onPrimaryContainer,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -79,8 +66,7 @@ class ProfileScreen extends StatelessWidget {
             // --- User Avatar and Name ---
             CircleAvatar(
               radius: 50,
-              backgroundColor:
-                  Theme.of(context).colorScheme.surfaceContainerHigh,
+              backgroundColor: theme.colorScheme.surfaceContainerHigh,
               backgroundImage: (currentUser.photoUrl != null &&
                       currentUser.photoUrl!.isNotEmpty)
                   ? NetworkImage(currentUser.photoUrl!)

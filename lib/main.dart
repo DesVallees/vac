@@ -7,6 +7,7 @@ import 'package:vaq/screens/store/store.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:vaq/screens/auth/auth.dart'; // Import the AuthWrapper
+import 'package:vaq/screens/onboarding/onboarding_wrapper.dart'; // Import onboarding wrapper
 import 'package:vaq/services/user_data.dart'; // Import the user data service
 import 'package:vaq/assets/data_classes/user.dart'; // Import custom User class
 
@@ -80,7 +81,9 @@ class MyApp extends StatelessWidget {
         ],
         locale: const Locale('es', 'ES'),
 
-        home: const AuthWrapper(),
+        home: OnboardingWrapper(
+          child: const AuthWrapper(),
+        ),
       ),
     );
   }

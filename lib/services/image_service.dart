@@ -73,17 +73,13 @@ class ImageService {
     switch (productType.toLowerCase()) {
       case 'vaccine':
         iconData = Icons.vaccines;
-        break;
       case 'bundle':
       case 'package':
         iconData = Icons.inventory_2;
-        break;
       case 'consultation':
         iconData = Icons.medical_services;
-        break;
       case 'article':
         iconData = Icons.article;
-        break;
       default:
         iconData = Icons.image_not_supported;
     }
@@ -191,7 +187,7 @@ class ImageService {
 
     try {
       final url = await getImageUrl(fileName, type);
-      if (url != null) {
+      if (url != null && context.mounted) {
         // Precache the image
         final imageProvider = NetworkImage(url);
         await precacheImage(imageProvider, context);

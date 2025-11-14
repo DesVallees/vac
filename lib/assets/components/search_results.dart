@@ -326,7 +326,6 @@ class SearchResults extends StatelessWidget {
             ),
           );
         }
-        break;
 
       case SearchResultType.package:
         if (result.data is VaccinationProgram) {
@@ -338,7 +337,6 @@ class SearchResults extends StatelessWidget {
             ),
           );
         }
-        break;
 
       case SearchResultType.article:
         if (result.data is Article) {
@@ -350,11 +348,9 @@ class SearchResults extends StatelessWidget {
             ),
           );
         }
-        break;
 
       case SearchResultType.page:
         _navigateToPage(context, result.id);
-        break;
     }
   }
 
@@ -367,7 +363,6 @@ class SearchResults extends StatelessWidget {
             builder: (context) => const ScheduleAppointmentScreen(),
           ),
         );
-        break;
       case 'settings':
         Navigator.push(
           context,
@@ -375,7 +370,6 @@ class SearchResults extends StatelessWidget {
             builder: (context) => const SettingsScreen(),
           ),
         );
-        break;
       case 'history':
         Navigator.push(
           context,
@@ -383,7 +377,6 @@ class SearchResults extends StatelessWidget {
             builder: (context) => const MedicalHistoryScreen(),
           ),
         );
-        break;
       case 'profile':
         Navigator.push(
           context,
@@ -391,7 +384,6 @@ class SearchResults extends StatelessWidget {
             builder: (context) => const ProfileScreen(),
           ),
         );
-        break;
     }
   }
 }

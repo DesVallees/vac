@@ -81,36 +81,37 @@ class PaymentService {
 
         if (responseData['success'] == true) {
           // Pago exitoso
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '¡Pago realizado con éxito! Referencia: ${responseData['refPayco']}',
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '¡Pago realizado con éxito! Referencia: ${responseData['refPayco']}',
+                ),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 3),
               ),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+            );
+          }
         } else {
-          // Log completo en consola
-          print('Detalles del error de pago: ${jsonEncode(responseData)}');
-
           // Mensaje en español al usuario
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Error en el pago: ${responseData['error'] ?? 'El proceso de pago falló'}',
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Error en el pago: ${responseData['error'] ?? 'El proceso de pago falló'}',
+                ),
+                backgroundColor: Colors.red,
+                action: SnackBarAction(
+                  label: 'Reintentar pago',
+                  textColor: Colors.white,
+                  onPressed: () => processPayment(
+                      context, appointment, amountCOP, cardData, customerData),
+                ),
+                duration: const Duration(seconds: 5),
               ),
-              backgroundColor: Colors.red,
-              action: SnackBarAction(
-                label: 'Reintentar pago',
-                textColor: Colors.white,
-                onPressed: () => processPayment(
-                    context, appointment, amountCOP, cardData, customerData),
-              ),
-              duration: const Duration(seconds: 5),
-            ),
-          );
-          throw Exception('Error en el pago (ver consola para más detalles)');
+            );
+          }
+          throw Exception('Error en el pago ${jsonEncode(responseData)}');
         }
       } else {
         // Log completo en consola
@@ -126,20 +127,22 @@ class PaymentService {
       print('Excepción durante el pago: ${e.toString()}');
 
       // Solo mensaje en español al usuario
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-              'Ocurrió un error durante el pago. Intente nuevamente.'),
-          backgroundColor: Colors.red,
-          action: SnackBarAction(
-            label: 'Reintentar pago',
-            textColor: Colors.white,
-            onPressed: () => processPayment(
-                context, appointment, amountCOP, cardData, customerData),
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+                'Ocurrió un error durante el pago. Intente nuevamente.'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Reintentar pago',
+              textColor: Colors.white,
+              onPressed: () => processPayment(
+                  context, appointment, amountCOP, cardData, customerData),
+            ),
+            duration: const Duration(seconds: 5),
           ),
-          duration: const Duration(seconds: 5),
-        ),
-      );
+        );
+      }
       rethrow;
     }
   }

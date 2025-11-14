@@ -9,11 +9,32 @@ const crypto = require("crypto");
 const epaycoSDK = require('epayco-sdk-node');
 // Initialize Firebase Admin
 admin.initializeApp();
+// Helper function to get server timestamp (works in emulator and production)
+function getServerTimestamp() {
+    // In emulator, use current Date (Firestore accepts Date objects)
+    if (process.env.FUNCTIONS_EMULATOR) {
+        return new Date();
+    }
+    // In production, use server timestamp
+    return admin.firestore.FieldValue.serverTimestamp();
+}
 // Define secrets from Firebase Secrets Manager
 const EPAYCO_PUBLIC_KEY = (0, params_1.defineSecret)('EPAYCO_PUBLIC_KEY');
 const EPAYCO_PRIVATE_KEY = (0, params_1.defineSecret)('EPAYCO_PRIVATE_KEY');
 const EPAYCO_CUSTOMER_ID = (0, params_1.defineSecret)('EPAYCO_CUSTOMER_ID');
 const EPAYCO_P_KEY = (0, params_1.defineSecret)('EPAYCO_P_KEY');
+// Helper function to get secret value (works locally with env vars and in production)
+function getSecret(secret, envVarName) {
+    // In local emulator, try environment variable first
+    if (process.env.FUNCTIONS_EMULATOR) {
+        const envValue = process.env[envVarName];
+        if (envValue) {
+            return envValue;
+        }
+    }
+    // Otherwise use Firebase secret
+    return secret.value();
+}
 // Initialize ePayco SDK
 let epayco = null;
 /**
@@ -21,13 +42,16 @@ let epayco = null;
  */
 function initializeEpayco() {
     if (!epayco) {
-        const publicKey = EPAYCO_PUBLIC_KEY.value();
-        const privateKey = EPAYCO_PRIVATE_KEY.value();
+        const publicKey = getSecret(EPAYCO_PUBLIC_KEY, 'EPAYCO_PUBLIC_KEY');
+        const privateKey = getSecret(EPAYCO_PRIVATE_KEY, 'EPAYCO_PRIVATE_KEY');
+        if (!publicKey || !privateKey) {
+            throw new Error('ePayco credentials not found. Set EPAYCO_PUBLIC_KEY and EPAYCO_PRIVATE_KEY environment variables for local testing.');
+        }
         epayco = epaycoSDK({
             apiKey: publicKey,
             privateKey: privateKey,
             lang: 'ES',
-            test: true, // Set to false for production
+            test: process.env.FUNCTIONS_EMULATOR ? true : false, // true when running locally, false in deployed production
         });
     }
     return epayco;
@@ -52,10 +76,10 @@ function generateSignature(data, pKey) {
  * @returns Checkout payload for ePayco
  */
 function createCheckoutPayload(request) {
-    const publicKey = EPAYCO_PUBLIC_KEY.value();
-    const privateKey = EPAYCO_PRIVATE_KEY.value();
-    const customerId = EPAYCO_CUSTOMER_ID.value();
-    const pKey = EPAYCO_P_KEY.value();
+    const publicKey = getSecret(EPAYCO_PUBLIC_KEY, 'EPAYCO_PUBLIC_KEY');
+    const privateKey = getSecret(EPAYCO_PRIVATE_KEY, 'EPAYCO_PRIVATE_KEY');
+    const customerId = getSecret(EPAYCO_CUSTOMER_ID, 'EPAYCO_CUSTOMER_ID');
+    const pKey = getSecret(EPAYCO_P_KEY, 'EPAYCO_P_KEY');
     if (!publicKey || !privateKey || !customerId || !pKey) {
         throw new Error('Missing ePayco configuration secrets');
     }
@@ -68,7 +92,7 @@ function createCheckoutPayload(request) {
         p_amount: request.amountCOP.toString(),
         p_currency_code: 'COP',
         p_description: request.description,
-        p_signature: '',
+        p_signature: '', // Will be calculated
         p_customer_email: request.customer.email,
         p_customer_document: '',
         p_customer_name: request.customer.name,
@@ -77,7 +101,7 @@ function createCheckoutPayload(request) {
         p_customer_address: '',
         p_customer_city: '',
         p_customer_country: 'CO',
-        p_test_request: 'TRUE',
+        p_test_request: 'TRUE', // Set to FALSE for production
         p_url_response: 'https://us-central1-vac-plus.cloudfunctions.net/epaycoResponse',
         p_url_confirmation: 'https://us-central1-vac-plus.cloudfunctions.net/epaycoConfirmation',
         p_extra1: request.appointmentId,
@@ -101,7 +125,7 @@ function createCheckoutPayload(request) {
         description: request.description,
         response: 'https://us-central1-vac-plus.cloudfunctions.net/epaycoResponse',
         confirmation: 'https://us-central1-vac-plus.cloudfunctions.net/epaycoConfirmation',
-        testMode: true,
+        testMode: true, // Set to false for production
         external: JSON.stringify({
             appointmentId: request.appointmentId,
             customerUid: request.customer.uid,
@@ -248,7 +272,7 @@ exports.startCheckout = functions.runWith({
 exports.chargeAppointment = functions.runWith({
     secrets: [EPAYCO_PUBLIC_KEY, EPAYCO_PRIVATE_KEY, EPAYCO_CUSTOMER_ID, EPAYCO_P_KEY]
 }).https.onRequest(async (req, res) => {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1;
     // Set CORS headers
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -355,12 +379,17 @@ exports.chargeAppointment = functions.runWith({
         const db = admin.firestore();
         const appointmentRef = db.collection('appointments').doc(request.appointmentId);
         const updateData = {
-            lastUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            lastUpdatedAt: getServerTimestamp(),
         };
         if (chargeResult.success) {
             updateData.paymentStatus = 'paid';
-            updateData.paymentRef = chargeResult.data.ref_payco;
-            updateData.transactionId = chargeResult.data.transaction_id;
+            // Only include fields that are actually defined
+            if ((_c = chargeResult.data) === null || _c === void 0 ? void 0 : _c.ref_payco) {
+                updateData.paymentRef = chargeResult.data.ref_payco;
+            }
+            if ((_d = chargeResult.data) === null || _d === void 0 ? void 0 : _d.transaction_id) {
+                updateData.transactionId = chargeResult.data.transaction_id;
+            }
             updateData.paymentData = {
                 amount: request.amount,
                 currency: 'COP',
@@ -370,39 +399,91 @@ exports.chargeAppointment = functions.runWith({
         }
         else {
             updateData.paymentStatus = 'failed';
-            updateData.paymentError = ((_c = chargeResult.error) === null || _c === void 0 ? void 0 : _c.message) || 'Payment failed';
+            const errorMessage = ((_h = (_g = (_f = (_e = chargeResult.error) === null || _e === void 0 ? void 0 : _e.data) === null || _f === void 0 ? void 0 : _f.errors) === null || _g === void 0 ? void 0 : _g[0]) === null || _h === void 0 ? void 0 : _h.errorMessage)
+                || ((_k = (_j = chargeResult.error) === null || _j === void 0 ? void 0 : _j.data) === null || _k === void 0 ? void 0 : _k.message)
+                || ((_l = chargeResult.error) === null || _l === void 0 ? void 0 : _l.message)
+                || 'El pago fue rechazado por ePayco';
+            updateData.paymentError = errorMessage;
         }
-        await appointmentRef.update(updateData);
+        // Update the document, preserving existing fields
+        // If document doesn't exist (testing), create it with set
+        try {
+            await appointmentRef.update(updateData);
+        }
+        catch (error) {
+            // If document doesn't exist (e.g., in testing), create it
+            if (error.code === 5 || ((_m = error.message) === null || _m === void 0 ? void 0 : _m.includes('No document to update'))) {
+                await appointmentRef.set(updateData, { merge: true });
+            }
+            else {
+                throw error;
+            }
+        }
         // Step 5: Return response
         if (chargeResult.success) {
-            functions.logger.info('Payment successful', {
-                appointmentId: request.appointmentId,
-                refPayco: chargeResult.data.ref_payco,
-                transactionId: chargeResult.data.transaction_id
-            });
-            res.status(200).json({
+            const responseData = {
                 success: true,
                 status: 'success',
-                refPayco: chargeResult.data.ref_payco,
-                transactionId: chargeResult.data.transaction_id,
                 data: {
                     amount: request.amount,
                     currency: 'COP',
                     method: 'card',
                     processedAt: new Date().toISOString()
                 }
+            };
+            // Only include fields that are actually defined
+            if ((_o = chargeResult.data) === null || _o === void 0 ? void 0 : _o.ref_payco) {
+                responseData.refPayco = chargeResult.data.ref_payco;
+            }
+            if ((_p = chargeResult.data) === null || _p === void 0 ? void 0 : _p.transaction_id) {
+                responseData.transactionId = chargeResult.data.transaction_id;
+            }
+            functions.logger.info('Payment successful', {
+                appointmentId: request.appointmentId,
+                refPayco: (_q = chargeResult.data) === null || _q === void 0 ? void 0 : _q.ref_payco,
+                transactionId: (_r = chargeResult.data) === null || _r === void 0 ? void 0 : _r.transaction_id
             });
+            res.status(200).json(responseData);
         }
         else {
+            // Extract detailed error messages from ePayco response
+            let errorMessage = 'El pago fue rechazado por ePayco';
+            const errorDetails = [];
+            if (((_t = (_s = chargeResult.error) === null || _s === void 0 ? void 0 : _s.data) === null || _t === void 0 ? void 0 : _t.errors) && Array.isArray(chargeResult.error.data.errors)) {
+                // Extract all error messages from the errors array
+                const errors = chargeResult.error.data.errors.map((err) => {
+                    return `${err.codError || 'Error'}: ${err.errorMessage || err.message || 'Error desconocido'}`;
+                });
+                errorDetails.push(...errors);
+                errorMessage = errors.join('; ') || errorMessage;
+            }
+            else if ((_v = (_u = chargeResult.error) === null || _u === void 0 ? void 0 : _u.data) === null || _v === void 0 ? void 0 : _v.message) {
+                errorMessage = chargeResult.error.data.message;
+            }
+            else if ((_w = chargeResult.error) === null || _w === void 0 ? void 0 : _w.message) {
+                errorMessage = chargeResult.error.message;
+            }
+            // Log full error details for debugging
             functions.logger.error('Payment failed', {
                 appointmentId: request.appointmentId,
-                error: chargeResult.error
+                error: chargeResult.error,
+                fullResponse: JSON.stringify(chargeResult),
+                extractedError: errorMessage,
+                chargeData: {
+                    amount: request.amount,
+                    currency: 'COP',
+                    customerEmail: request.customer.email,
+                    docType: request.customer.doc_type,
+                    docNumber: request.customer.doc_number ? '***' : 'missing'
+                }
             });
             res.status(200).json({
                 success: false,
                 status: 'failure',
-                error: ((_d = chargeResult.error) === null || _d === void 0 ? void 0 : _d.message) || 'Payment failed',
-                data: chargeResult.error
+                error: errorMessage,
+                errorCode: ((_0 = (_z = (_y = (_x = chargeResult.error) === null || _x === void 0 ? void 0 : _x.data) === null || _y === void 0 ? void 0 : _y.errors) === null || _z === void 0 ? void 0 : _z[0]) === null || _0 === void 0 ? void 0 : _0.codError) || 'UNKNOWN',
+                detalles: chargeResult.error,
+                errorDetails: errorDetails.length > 0 ? errorDetails : undefined
             });
         }
     }
@@ -412,11 +493,24 @@ exports.chargeAppointment = functions.runWith({
         try {
             const db = admin.firestore();
             const appointmentRef = db.collection('appointments').doc(req.body.appointmentId);
-            await appointmentRef.update({
+            const errorUpdateData = {
                 paymentStatus: 'failed',
                 paymentError: error instanceof Error ? error.message : 'Unknown error',
-                lastUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
+                lastUpdatedAt: getServerTimestamp(),
+            };
+            // Try to update first (preserves existing fields)
+            try {
+                await appointmentRef.update(errorUpdateData);
+            }
+            catch (updateError) {
+                // If document doesn't exist (e.g., in testing), create it
+                if (updateError.code === 5 || ((_1 = updateError.message) === null || _1 === void 0 ? void 0 : _1.includes('No document to update'))) {
+                    await appointmentRef.set(errorUpdateData, { merge: true });
+                }
+                else {
+                    throw updateError;
+                }
+            }
         }
         catch (updateError) {
             functions.logger.error('Failed to update appointment with error status', updateError);

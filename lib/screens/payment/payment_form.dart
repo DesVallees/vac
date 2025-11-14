@@ -67,11 +67,14 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Información de Pago'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
+        elevation: 0,
       ),
       body: Form(
         key: _formKey,
@@ -80,58 +83,151 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Payment Summary
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Resumen del Pago',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text('Servicio: ${widget.appointment.locationName}'),
-                      Text(
-                          'Fecha: ${DateFormat('dd/MM/yyyy').format(widget.appointment.dateTime)}'),
-                      Text(
-                          'Hora: ${DateFormat('HH:mm').format(widget.appointment.dateTime)}'),
-                      const Divider(),
-                      Text(
-                        'Total: \$${widget.amount.toStringAsFixed(2)} COP',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                      ),
-                    ],
+              // Payment Summary - Improved Design
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20.0),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: theme.colorScheme.outline.withOpacity(0.2),
+                    width: 1,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.shadow.withOpacity(0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with icon and title
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.receipt_long,
+                            color: theme.colorScheme.onPrimaryContainer,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Resumen del Pago',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                              Text(
+                                'Revisa los detalles de tu cita',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Service details in a clean layout
+                    _buildImprovedSummaryRow(
+                      theme,
+                      Icons.location_on,
+                      'Servicio',
+                      widget.appointment.locationName,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildImprovedSummaryRow(
+                      theme,
+                      Icons.calendar_today,
+                      'Fecha',
+                      DateFormat('dd/MM/yyyy')
+                          .format(widget.appointment.dateTime),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildImprovedSummaryRow(
+                      theme,
+                      Icons.access_time,
+                      'Hora',
+                      DateFormat('HH:mm').format(widget.appointment.dateTime),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Total amount with improved styling
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            theme.colorScheme.primary.withOpacity(0.1),
+                            theme.colorScheme.primary.withOpacity(0.05),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Total a pagar',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '\$${widget.amount.toStringAsFixed(2)} COP',
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
-              // Customer Information
-              Text(
-                'Información Personal',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+              // Customer Information Section
+              _buildSectionHeader(
+                theme,
+                Icons.person_outline,
+                'Datos Personales',
+                'Información del titular de la tarjeta',
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
+                    child: _buildStyledTextField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre *',
-                        border: OutlineInputBorder(),
-                      ),
+                      label: 'Nombre',
+                      isRequired: true,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'El nombre es requerido';
@@ -142,12 +238,10 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: _buildStyledTextField(
                       controller: _lastNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Apellido *',
-                        border: OutlineInputBorder(),
-                      ),
+                      label: 'Apellido',
+                      isRequired: true,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'El apellido es requerido';
@@ -160,12 +254,10 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              TextFormField(
+              _buildStyledTextField(
                 controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email *',
-                  border: OutlineInputBorder(),
-                ),
+                label: 'Email',
+                isRequired: true,
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -183,21 +275,71 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
               Row(
                 children: [
                   Expanded(
-                    flex: 1,
+                    flex: 3,
                     child: DropdownButtonFormField<String>(
                       value: _docType,
-                      decoration: const InputDecoration(
-                        labelText: 'Tipo de Documento *',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: 'Tipo de documento *',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: theme.colorScheme.surface,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'CC', child: Text('Cédula')),
                         DropdownMenuItem(
-                            value: 'CE', child: Text('Cédula de Extranjería')),
-                        DropdownMenuItem(value: 'PP', child: Text('Pasaporte')),
+                          value: 'CC',
+                          child: Text(
+                            'Cédula',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                         DropdownMenuItem(
-                            value: 'TI', child: Text('Tarjeta de Identidad')),
+                          value: 'CE',
+                          child: Text(
+                            'Cédula Extranjería',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'PP',
+                          child: Text(
+                            'Pasaporte',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'TI',
+                          child: Text(
+                            'Tarjeta Identidad',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
+                      selectedItemBuilder: (BuildContext context) {
+                        return const [
+                          Text(
+                            'Cédula',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Cédula Extranjería',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Pasaporte',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Tarjeta Identidad',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ];
+                      },
                       onChanged: (value) {
                         setState(() {
                           _docType = value ?? 'CC';
@@ -210,9 +352,17 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                     flex: 2,
                     child: TextFormField(
                       controller: _docNumberController,
-                      decoration: const InputDecoration(
-                        labelText: 'Número de Documento *',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: 'Número *',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: theme.colorScheme.surface,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                       ),
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -231,61 +381,55 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
+                    child: _buildStyledTextField(
                       controller: _phoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Teléfono',
-                        border: OutlineInputBorder(),
-                      ),
+                      label: 'Teléfono',
                       keyboardType: TextInputType.phone,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        PhoneNumberInputFormatter(),
+                      ],
+                      hintText: '(XXX) XXX-XXXX',
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: _buildStyledTextField(
                       controller: _cityController,
-                      decoration: const InputDecoration(
-                        labelText: 'Ciudad',
-                        border: OutlineInputBorder(),
-                      ),
+                      label: 'Ciudad',
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
 
-              TextFormField(
+              _buildStyledTextField(
                 controller: _addressController,
-                decoration: const InputDecoration(
-                  labelText: 'Dirección',
-                  border: OutlineInputBorder(),
-                ),
+                label: 'Dirección',
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
-              // Card Information
-              Text(
+              // Card Information Section
+              _buildSectionHeader(
+                theme,
+                Icons.credit_card_outlined,
                 'Información de la Tarjeta',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                'Datos de tu tarjeta de crédito o débito',
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              TextFormField(
+              _buildStyledTextField(
                 controller: _cardNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'Número de Tarjeta *',
-                  border: OutlineInputBorder(),
-                  hintText: '1234 5678 9012 3456',
-                ),
+                label: 'Número de Tarjeta',
+                isRequired: true,
                 keyboardType: TextInputType.number,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(16),
+                  LengthLimitingTextInputFormatter(19),
                   CardNumberInputFormatter(),
                 ],
+                hintText: '1234 5678 9012 3456',
+                prefixIcon: Icons.credit_card,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'El número de tarjeta es requerido';
@@ -301,18 +445,16 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
+                    child: _buildStyledTextField(
                       controller: _expMonthController,
-                      decoration: const InputDecoration(
-                        labelText: 'Mes *',
-                        border: OutlineInputBorder(),
-                        hintText: 'MM',
-                      ),
+                      label: 'Mes',
+                      isRequired: true,
                       keyboardType: TextInputType.number,
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                         LengthLimitingTextInputFormatter(2),
                       ],
+                      hintText: 'MM',
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Mes requerido';
@@ -327,18 +469,16 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: _buildStyledTextField(
                       controller: _expYearController,
-                      decoration: const InputDecoration(
-                        labelText: 'Año *',
-                        border: OutlineInputBorder(),
-                        hintText: 'YYYY',
-                      ),
+                      label: 'Año',
+                      isRequired: true,
                       keyboardType: TextInputType.number,
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                         LengthLimitingTextInputFormatter(4),
                       ],
+                      hintText: 'YYYY',
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Año requerido';
@@ -353,18 +493,16 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: _buildStyledTextField(
                       controller: _cvcController,
-                      decoration: const InputDecoration(
-                        labelText: 'CVC *',
-                        border: OutlineInputBorder(),
-                        hintText: '123',
-                      ),
+                      label: 'CVC',
+                      isRequired: true,
                       keyboardType: TextInputType.number,
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                         LengthLimitingTextInputFormatter(4),
                       ],
+                      hintText: '123',
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'CVC requerido';
@@ -410,39 +548,55 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                       : Text('Pagar \$${widget.amount.toStringAsFixed(2)} COP'),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 30),
 
-              // Security Notice
+              // Trust Indicators
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surfaceVariant
-                      .withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(8),
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color:
-                        Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                    color: theme.colorScheme.outline.withOpacity(0.2),
                   ),
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    Icon(
-                      Icons.security,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Sus datos están protegidos con encriptación SSL. No almacenamos información de tarjetas.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.security,
+                          color: theme.colorScheme.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Pago seguro y protegido',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurface,
                             ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sus datos están protegidos con encriptación SSL de 256 bits. No almacenamos información de tarjetas en nuestros servidores.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _buildTrustBadge(theme, 'SSL', Icons.lock),
+                        const SizedBox(width: 12),
+                        _buildTrustBadge(theme, 'PCI DSS', Icons.verified_user),
+                        const SizedBox(width: 12),
+                        _buildTrustBadge(theme, 'ePayCo', Icons.payment),
+                      ],
                     ),
                   ],
                 ),
@@ -505,6 +659,204 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
       }
     }
   }
+
+  // Helper methods
+  Widget _buildImprovedSummaryRow(
+    ThemeData theme,
+    IconData icon,
+    String label,
+    String value,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(
+    ThemeData theme,
+    IconData icon,
+    String title,
+    String subtitle,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.outline.withOpacity(0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: theme.colorScheme.onPrimaryContainer,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStyledTextField({
+    required TextEditingController controller,
+    required String label,
+    bool isRequired = false,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? hintText,
+    IconData? prefixIcon,
+    String? Function(String?)? validator,
+  }) {
+    final theme = Theme.of(context);
+
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: '$label${isRequired ? ' *' : ''}',
+        hintText: hintText,
+        prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: theme.colorScheme.outline,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: theme.colorScheme.outline.withOpacity(0.5),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: theme.colorScheme.primary,
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: theme.colorScheme.error,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: theme.colorScheme.error,
+            width: 2,
+          ),
+        ),
+        filled: true,
+        fillColor: theme.colorScheme.surface,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrustBadge(ThemeData theme, String label, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 12,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onPrimaryContainer,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class CardNumberInputFormatter extends TextInputFormatter {
@@ -527,5 +879,37 @@ class CardNumberInputFormatter extends TextInputFormatter {
       text: buffer.toString(),
       selection: TextSelection.collapsed(offset: buffer.length),
     );
+  }
+}
+
+class PhoneNumberInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+
+    if (text.isEmpty) {
+      return TextEditingValue.empty;
+    }
+
+    if (text.length <= 3) {
+      return TextEditingValue(
+        text: '($text',
+        selection: TextSelection.collapsed(offset: text.length + 1),
+      );
+    } else if (text.length <= 6) {
+      return TextEditingValue(
+        text: '(${text.substring(0, 3)}) ${text.substring(3)}',
+        selection: TextSelection.collapsed(offset: text.length + 3),
+      );
+    } else {
+      return TextEditingValue(
+        text:
+            '(${text.substring(0, 3)}) ${text.substring(3, 6)}-${text.substring(6, text.length > 10 ? 10 : text.length)}',
+        selection: TextSelection.collapsed(offset: text.length + 4),
+      );
+    }
   }
 }
