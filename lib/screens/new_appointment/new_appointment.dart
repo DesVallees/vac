@@ -141,54 +141,109 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
       setState(() {
         _selectedDate = picked;
         _selectedTimeSlot = null;
-        _availableTimeSlots =
-            _generateAvailableTimeSlots(picked, _selectedLocation);
+        _availableTimeSlots = [];
       });
+      // Load available time slots asynchronously
+      _loadAvailableTimeSlots(picked, _selectedLocation);
     }
   }
 
-  // SIMULATED time slots - Replace with real availability logic later
-  List<DateTime> _generateAvailableTimeSlots(
-      DateTime? date, Location? location) {
+  // Load available time slots for a specific date and location
+  // This fetches booked appointments from the database and filters out conflicting times
+  Future<void> _loadAvailableTimeSlots(
+      DateTime? date, Location? location) async {
     if (date == null || location == null) {
-      return []; // No slots if date or location isn't selected
+      if (mounted) {
+        setState(() {
+          _availableTimeSlots = [];
+        });
+      }
+      return;
     }
 
-    List<DateTime> slots = [];
-    // Example: Generate slots from 9 AM to 6 PM (exclusive), every 30 minutes
-    DateTime startTime =
-        DateTime(date.year, date.month, date.day, 9, 0); // 9:00 AM
-    DateTime endTime =
-        DateTime(date.year, date.month, date.day, 18, 0); // 6:00 PM (exclusive)
+    setState(() {
+      _isLoading = true;
+    });
 
-    // TODO: Get actual booked appointments for this location on this date
-    final bookedSlots = <DateTime>[]; // Placeholder
+    try {
+      // Fetch booked appointment slots for this location on this date
+      // Using the public appointment_slots collection
+      final bookedSlots = await _appointmentRepository
+          .getBookedAppointmentsForLocationAndDate(location.id, date);
 
-    while (startTime.isBefore(endTime)) {
-      // Skip 13:00 and 13:30
-      if (startTime.hour == 13) {
-        startTime = startTime.add(const Duration(minutes: 30));
-        continue;
-      }
-      // Basic check: Don't add slots in the past (if selected date is today)
+      // Generate all possible time slots (9 AM to 6 PM, every 30 minutes)
+      final List<DateTime> allSlots = [];
+      DateTime startTime =
+          DateTime(date.year, date.month, date.day, 9, 0); // 9:00 AM
+      final DateTime endTime = DateTime(
+          date.year, date.month, date.day, 18, 0); // 6:00 PM (exclusive)
+
       final now = DateTime.now();
-      if (startTime.isAfter(now)) {
-        // Check if this slot is already booked (compare year, month, day, hour, minute)
-        bool isBooked = bookedSlots.any((booked) =>
-            booked.year == startTime.year &&
-            booked.month == startTime.month &&
-            booked.day == startTime.day &&
-            booked.hour == startTime.hour &&
-            booked.minute == startTime.minute);
 
-        if (!isBooked) {
-          slots.add(startTime);
+      while (startTime.isBefore(endTime)) {
+        // Skip lunch break (13:00 and 13:30)
+        if (startTime.hour == 13) {
+          startTime = startTime.add(const Duration(minutes: 30));
+          continue;
+        }
+        // Don't add slots in the past (if selected date is today)
+        if (startTime.isAfter(now)) {
+          allSlots.add(startTime);
+        }
+        startTime = startTime.add(const Duration(minutes: 30));
+      }
+
+      // Filter out slots that conflict with booked appointment slots
+      // We need to check for overlaps considering appointment duration
+      final List<DateTime> availableSlots = [];
+      for (final slot in allSlots) {
+        bool isAvailable = true;
+
+        // Determine the duration for this slot (default 30 minutes)
+        // This matches what will be used when creating the appointment
+        Duration slotDuration = const Duration(minutes: 30);
+        if (_selectedProduct != null) {
+          if (_selectedProduct! is Consultation) {
+            slotDuration = (_selectedProduct! as Consultation).typicalDuration;
+          } else if (_selectedProduct! is DoseBundle) {
+            slotDuration = const Duration(minutes: 30);
+          }
+        }
+
+        final slotEnd = slot.add(slotDuration);
+
+        for (final bookedSlot in bookedSlots) {
+          final bookedStart = bookedSlot.dateTime;
+          final bookedEnd = bookedSlot.endTime;
+
+          // Check for overlap: slot overlaps if it starts before booked slot ends
+          // and slot ends after booked slot starts
+          if (slot.isBefore(bookedEnd) && slotEnd.isAfter(bookedStart)) {
+            isAvailable = false;
+            break;
+          }
+        }
+
+        if (isAvailable) {
+          availableSlots.add(slot);
         }
       }
-      startTime =
-          startTime.add(const Duration(minutes: 30)); // Increment by 30 mins
+
+      if (mounted) {
+        setState(() {
+          _availableTimeSlots = availableSlots;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading available time slots: $e');
+      if (mounted) {
+        setState(() {
+          _availableTimeSlots = [];
+          _isLoading = false;
+        });
+      }
     }
-    return slots;
   }
 
   void _onTimeSlotSelected(DateTime? timeSlot) {
@@ -218,9 +273,12 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
       setState(() {
         _selectedLocation = location;
         _selectedTimeSlot = null;
-        _availableTimeSlots =
-            _generateAvailableTimeSlots(_selectedDate, location);
+        _availableTimeSlots = [];
       });
+      // Load available time slots asynchronously if date is already selected
+      if (_selectedDate != null) {
+        _loadAvailableTimeSlots(_selectedDate, location);
+      }
     }
   }
 
@@ -257,10 +315,46 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
         duration = (_selectedProduct! as Consultation).typicalDuration;
       } else if (_selectedProduct! is DoseBundle) {
         apptType = AppointmentType.packageApplication;
-        duration = const Duration(minutes: 45);
+        duration = const Duration(minutes: 30);
       } else {
         apptType = AppointmentType.vaccination;
         duration = const Duration(minutes: 30);
+      }
+
+      // Verify that the selected time slot is still available
+      // This is a last check before creating the appointment in case someone took the spot
+      final isAvailable = await _appointmentRepository.isTimeSlotAvailable(
+        _selectedLocation!.id,
+        _selectedTimeSlot!,
+        duration,
+      );
+
+      if (!isAvailable) {
+        // Time slot was taken, update available slots and notify user
+        if (mounted) {
+          setState(() {
+            _selectedTimeSlot = null;
+            _isLoading = false;
+          });
+          // Reload available time slots to reflect current availability
+          _loadAvailableTimeSlots(_selectedDate, _selectedLocation);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Lo sentimos, ese horario ya no está disponible. Por favor selecciona otro horario.',
+              ),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              duration: const Duration(seconds: 5),
+              action: SnackBarAction(
+                label: 'OK',
+                textColor: Theme.of(context).colorScheme.onError,
+                onPressed: () {},
+              ),
+            ),
+          );
+        }
+        return;
       }
 
       // Determine payment status based on payment method
@@ -317,15 +411,50 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
 
           // Only create appointment if payment was successful
           if (paymentResult == true && mounted) {
-            // Create the appointment after successful payment
+            // Verify time slot is still available after payment
+            // Someone might have taken the spot during payment processing
+            final isStillAvailable =
+                await _appointmentRepository.isTimeSlotAvailable(
+              _selectedLocation!.id,
+              _selectedTimeSlot!,
+              duration,
+            );
+
+            if (!isStillAvailable) {
+              // Time slot was taken during payment, notify user
+              setState(() {
+                _selectedTimeSlot = null;
+                _isLoading = false;
+              });
+              // Reload available time slots
+              _loadAvailableTimeSlots(_selectedDate, _selectedLocation);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text(
+                    'Lo sentimos, ese horario fue tomado mientras procesabas el pago. Por favor selecciona otro horario. Tu pago ha sido procesado y será reembolsado si aplica.',
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  duration: const Duration(seconds: 6),
+                  action: SnackBarAction(
+                    label: 'OK',
+                    textColor: Theme.of(context).colorScheme.onError,
+                    onPressed: () {},
+                  ),
+                ),
+              );
+              return;
+            }
+
+            // Create the appointment after successful payment and verification
             await _appointmentRepository.createAppointment(newAppointment);
-            
+
             Fluttertoast.showToast(
               msg: '¡Cita agendada y pago realizado con éxito!',
               toastLength: Toast.LENGTH_LONG,
               gravity: ToastGravity.BOTTOM,
             );
-            
+
             // Navigate to appointments screen
             Navigator.of(context).popUntil((route) => route.isFirst);
             Provider.of<BottomNavigationBarProvider>(context, listen: false)
@@ -344,7 +473,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
       } else {
         // In-person payment - create appointment immediately
         await _appointmentRepository.createAppointment(newAppointment);
-        
+
         if (mounted) {
           Fluttertoast.showToast(
               msg: '¡Cita agendada con éxito!',
@@ -353,7 +482,7 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
               backgroundColor: Theme.of(context).colorScheme.primary,
               textColor: Theme.of(context).colorScheme.onPrimary,
               fontSize: 18.0);
-          
+
           // Navigate to appointments screen
           Navigator.of(context).popUntil((route) => route.isFirst);
           Provider.of<BottomNavigationBarProvider>(context, listen: false)
@@ -638,12 +767,31 @@ class _ScheduleAppointmentScreenState extends State<ScheduleAppointmentScreen> {
   }
 
   Widget _buildTimeSlotDropdown() {
+    if (_isLoading && _availableTimeSlots.isEmpty) {
+      return Row(
+        children: [
+          const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Cargando horarios disponibles...',
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+        ],
+      );
+    }
+
     if (_availableTimeSlots.isEmpty) {
       return Text(
         'No hay horarios disponibles para esta fecha/punto.',
         style: TextStyle(color: Theme.of(context).colorScheme.tertiary),
       );
     }
+
     return DropdownButtonFormField<DateTime>(
       value: _selectedTimeSlot,
       hint: const Text('Selecciona hora...'),

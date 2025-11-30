@@ -176,7 +176,7 @@ class _ScheduleState extends State<Schedule> {
                 } else if (snapshot.hasError) {
                   return const Center(child: Text('Error al cargar las citas'));
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No hay citas disponibles'));
+                  return const Center(child: Text('Ninguna cita programada.'));
                 }
 
                 final appointments = snapshot.data!;

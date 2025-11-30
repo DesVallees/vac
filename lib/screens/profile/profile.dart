@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart'
     as fb_auth; // Use alias for FirebaseAuth
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vaq/assets/data_classes/user.dart'; // Import the User class
+import 'package:vaq/assets/data_classes/child.dart'; // Import Child class
+import 'package:vaq/services/user_data.dart'; // Import UserDataService
 import 'package:vaq/screens/auth/auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:vaq/assets/helpers/functions.dart';
 import 'package:vaq/screens/history/history.dart';
 import 'package:vaq/screens/settings/settings.dart'; // Import the Settings screen
 import 'package:vaq/screens/profile/edit_profile.dart'; // Import the Edit Profile screen
+import 'package:vaq/screens/profile/child_management_screen.dart'; // Import ChildManagementScreen
 
 // Placeholder for the Medical Records screen
 class MedicalRecordsScreen extends StatelessWidget {
@@ -24,8 +28,85 @@ class MedicalRecordsScreen extends StatelessWidget {
   }
 }
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isLoadingMedicalHistoryFlag = true;
+  bool _medicalHistoryCompleted = false;
+  bool _isLoadingChildren = false;
+  List<Child> _children = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkMedicalHistoryFlag();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final currentUser = context.watch<User?>();
+    if (currentUser is NormalUser && currentUser.patientProfileIds.isNotEmpty) {
+      _loadChildren(currentUser.id);
+    } else {
+      setState(() {
+        _children = [];
+      });
+    }
+  }
+
+  Future<void> _checkMedicalHistoryFlag() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final completed = prefs.getBool('medicalHistoryCompleted') ?? false;
+      if (mounted) {
+        setState(() {
+          _medicalHistoryCompleted = completed;
+          _isLoadingMedicalHistoryFlag = false;
+        });
+      }
+    } catch (e) {
+      print('Error checking medical history flag: $e');
+      if (mounted) {
+        setState(() {
+          _medicalHistoryCompleted = false;
+          _isLoadingMedicalHistoryFlag = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadChildren(String parentId) async {
+    if (_isLoadingChildren) return; // Prevent multiple simultaneous loads
+
+    setState(() {
+      _isLoadingChildren = true;
+    });
+
+    try {
+      final userDataService = context.read<UserDataService>();
+      final children = await userDataService.loadChildren(parentId);
+
+      if (mounted) {
+        setState(() {
+          _children = children;
+          _isLoadingChildren = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading children: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingChildren = false;
+        });
+      }
+    }
+  }
 
   // --- Sign Out Logic ---
   Future<void> _signOut(BuildContext context) async {
@@ -107,24 +188,22 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 30),
 
             // Kids Profile Section
-            if (currentUser is NormalUser &&
-                (currentUser).patientProfileIds.isNotEmpty) ...[
-              _buildKidsProfileSection(theme, currentUser),
+            if (currentUser is NormalUser) ...[
+              _buildKidsProfileSection(context, theme, currentUser),
               const SizedBox(height: 20),
               const Divider(),
               const SizedBox(height: 20),
             ],
 
-            // Medical History Progress
-            _buildMedicalHistoryProgress(context, theme),
-            const SizedBox(height: 20),
-            const Divider(),
-            const SizedBox(height: 20),
+            // Medical History Progress (only show if not completed)
+            if (!_isLoadingMedicalHistoryFlag && !_medicalHistoryCompleted) ...[
+              _buildMedicalHistoryProgress(context, theme),
+              const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 20),
+            ],
 
             // --- User Specific Details ---
-            _buildInfoTile(Icons.badge_outlined, 'Tipo de Usuario',
-                currentUser.userType.toString().split('.').last),
-
             if (currentUser is Pediatrician) ...[
               _buildInfoTile(Icons.medical_services_outlined, 'Especialidad',
                   (currentUser).specialty),
@@ -133,7 +212,7 @@ class ProfileScreen extends StatelessWidget {
             ],
 
             if (currentUser is NormalUser) ...[
-              _buildInfoTile(Icons.group_outlined, 'Perfiles Pacientes',
+              _buildInfoTile(Icons.child_care_outlined, 'Hijos Registrados',
                   (currentUser).patientProfileIds.length.toString()),
             ],
 
@@ -166,12 +245,18 @@ class ProfileScreen extends StatelessWidget {
                   Icon(Icons.edit_outlined, color: theme.colorScheme.secondary),
               title: const Text('Editar Perfil'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                // Refresh children list when returning from EditProfileScreen
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (context) => const EditProfileScreen()),
                 );
+                
+                // Reload children if user is NormalUser
+                if (mounted && currentUser is NormalUser) {
+                  _loadChildren(currentUser.id);
+                }
               },
             ),
 
@@ -213,7 +298,8 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildKidsProfileSection(ThemeData theme, NormalUser user) {
+  Widget _buildKidsProfileSection(
+      BuildContext context, ThemeData theme, NormalUser user) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -266,8 +352,18 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () {
-                  // TODO: Navigate to kids management screen
+                onPressed: () async {
+                  // Navigate to EditProfileScreen to add children
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const EditProfileScreen()),
+                  );
+                  
+                  // Reload children when returning
+                  if (mounted) {
+                    _loadChildren(user.id);
+                  }
                 },
                 icon: const Icon(Icons.add_circle_outline),
                 tooltip: 'Agregar hijo',
@@ -276,8 +372,15 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Kids list (placeholder for now)
-          if (user.patientProfileIds.isEmpty)
+          // Kids list
+          if (_isLoadingChildren)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_children.isEmpty)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -308,20 +411,62 @@ class ProfileScreen extends StatelessWidget {
               ),
             )
           else
-            // TODO: Display actual kids when data is available
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '${user.patientProfileIds.length} perfil${user.patientProfileIds.length != 1 ? 'es' : ''} configurado${user.patientProfileIds.length != 1 ? 's' : ''}',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+            ...(_children.map((child) {
+              String _genderToString(Gender? gender) {
+                if (gender == null) return '';
+                switch (gender) {
+                  case Gender.male:
+                    return 'Masculino';
+                  case Gender.female:
+                    return 'Femenino';
+                  case Gender.other:
+                    return 'Otro';
+                }
+              }
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ),
-            ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: theme.colorScheme.secondaryContainer,
+                    child: Icon(
+                      Icons.child_care,
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                  title: Text(
+                    child.name,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${child.ageString}${child.gender != null ? ' • ${_genderToString(child.gender)}' : ''}',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    // Navigate to ChildManagementScreen
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChildManagementScreen(
+                          child: child,
+                        ),
+                      ),
+                    );
+                    
+                    // Reload children when returning
+                    if (mounted) {
+                      _loadChildren(user.id);
+                    }
+                  },
+                ),
+              );
+            }).toList()),
         ],
       ),
     );

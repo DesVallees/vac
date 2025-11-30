@@ -67,9 +67,29 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       if (user != null) {
         final firestore = FirebaseFirestore.instance;
 
-        // Save children to Firestore
+        // Save children to Firestore with parentId set
+        List<String> childIds = [];
         for (final child in _children) {
-          await firestore.collection('children').add(child.toFirestore());
+          // Set parentId to current user's UID
+          final childWithParent = child.copyWith(parentId: user.uid);
+          final docRef = await firestore
+              .collection('children')
+              .add(childWithParent.toFirestore());
+          childIds.add(docRef.id);
+        }
+
+        // Update user's patientProfileIds if children were added
+        if (childIds.isNotEmpty) {
+          final userDoc = await firestore.collection('users').doc(user.uid).get();
+          if (userDoc.exists) {
+            final userData = userDoc.data()!;
+            List<String> patientProfileIds =
+                List<String>.from(userData['patientProfileIds'] as List<dynamic>? ?? []);
+            patientProfileIds.addAll(childIds);
+            await firestore.collection('users').doc(user.uid).update({
+              'patientProfileIds': patientProfileIds,
+            });
+          }
         }
 
         // Update user to mark onboarding as completed

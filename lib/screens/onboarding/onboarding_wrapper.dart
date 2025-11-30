@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vaq/assets/data_classes/user.dart';
 import 'package:vaq/screens/onboarding/onboarding_flow.dart';
 
 class OnboardingWrapper extends StatefulWidget {
@@ -66,6 +68,16 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    // --- Use the User? object provided by StreamProvider ---
+    final currentUser = context.watch<User?>();
+
+    // Only show onboarding for authenticated users
+    // If user is not authenticated, pass through to child (which will handle auth)
+    if (currentUser == null) {
+      return widget.child;
+    }
+
+    // User is authenticated - check onboarding status
     // Show loading indicator while checking SharedPreferences
     if (_isLoadingOnboardingState) {
       return const Scaffold(
@@ -73,12 +85,12 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> {
       );
     }
 
-    // If onboarding needs to be shown, show it
+    // If onboarding needs to be shown for authenticated users, show it
     if (_showOnboarding) {
       return OnboardingFlow(onDone: _markOnboardingAsCompleted);
     }
 
-    // Otherwise, show the normal app
+    // Onboarding completed, show the main app
     return widget.child;
   }
 }

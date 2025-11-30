@@ -26,31 +26,57 @@ class Child {
     this.lastUpdated,
   });
 
-  // Calculate age in months
+  // Calculate age in months (total months since birth)
   int get ageInMonths {
     final now = DateTime.now();
-    final age = now.difference(dateOfBirth);
-    return (age.inDays / 30.44).round(); // Average days per month
+    final years = now.year - dateOfBirth.year;
+    final months = now.month - dateOfBirth.month;
+    final totalMonths = years * 12 + months;
+    
+    // If the day hasn't passed this month, subtract one month
+    if (now.day < dateOfBirth.day) {
+      return totalMonths - 1;
+    }
+    return totalMonths;
   }
 
-  // Calculate age in years
+  // Calculate age in years (completed years, not rounded)
   int get ageInYears {
     final now = DateTime.now();
-    final age = now.difference(dateOfBirth);
-    return (age.inDays / 365.25).round(); // Account for leap years
+    int years = now.year - dateOfBirth.year;
+    
+    // Check if birthday has occurred this year
+    if (now.month < dateOfBirth.month || 
+        (now.month == dateOfBirth.month && now.day < dateOfBirth.day)) {
+      years--;
+    }
+    
+    return years;
   }
 
   // Get age as a readable string
   String get ageString {
     final years = ageInYears;
-    final months = ageInMonths;
+    final totalMonths = ageInMonths;
+    final remainingMonths = totalMonths % 12;
 
     if (years == 0) {
-      return '$months mes${months != 1 ? 'es' : ''}';
-    } else if (months % 12 == 0) {
+      // Less than 1 year old
+      if (totalMonths == 0) {
+        // Less than 1 month old - calculate days
+        final now = DateTime.now();
+        final days = now.difference(dateOfBirth).inDays;
+        if (days == 0) {
+          return 'Recién nacido';
+        }
+        return '$days día${days != 1 ? 's' : ''}';
+      }
+      return '$totalMonths mes${totalMonths != 1 ? 'es' : ''}';
+    } else if (remainingMonths == 0) {
+      // Exact years (e.g., exactly 2 years)
       return '$years año${years != 1 ? 's' : ''}';
     } else {
-      final remainingMonths = months % 12;
+      // Years and months
       return '$years año${years != 1 ? 's' : ''} y $remainingMonths mes${remainingMonths != 1 ? 'es' : ''}';
     }
   }

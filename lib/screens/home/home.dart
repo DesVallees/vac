@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:vaq/assets/components/appointment_card.dart';
 import 'package:vaq/assets/components/article_card.dart';
 import 'package:vaq/assets/components/package_card.dart';
+import 'package:vaq/assets/components/detailed_product_card.dart';
 import 'package:vaq/assets/components/search_bar.dart';
 import 'package:vaq/assets/components/search_results.dart';
 
@@ -22,6 +23,8 @@ import 'package:vaq/screens/settings/settings.dart';
 import 'package:vaq/services/dynamic_article_repository.dart';
 import 'package:vaq/services/dynamic_product_repository.dart';
 import 'package:vaq/services/search_service.dart';
+import 'package:vaq/services/recommendation_service.dart';
+import 'package:vaq/services/user_data.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
@@ -320,6 +323,9 @@ class _HomeState extends State<Home> {
                     const SizedBox(height: 20),
                     _buildPromotionalBanner(colorScheme),
                     const SizedBox(height: 40),
+                    // Personalized recommendations for children
+                    _buildPersonalizedRecommendations(context, colorScheme),
+                    const SizedBox(height: 40),
                     const Text(
                       'Paquetes Destacados',
                       style:
@@ -531,6 +537,100 @@ Widget _buildPromotionalBanner(ColorScheme colorScheme) {
         Image.asset('lib/assets/images/logo.png', height: 80),
       ],
     ),
+  );
+}
+
+Widget _buildPersonalizedRecommendations(
+    BuildContext context, ColorScheme colorScheme) {
+  final currentUser = context.watch<vaq_user.User?>();
+
+  // Only show recommendations for NormalUser with children
+  if (currentUser == null || currentUser is! vaq_user.NormalUser) {
+    return const SizedBox.shrink();
+  }
+
+  final normalUser = currentUser as vaq_user.NormalUser;
+  if (normalUser.patientProfileIds.isEmpty) {
+    return const SizedBox.shrink();
+  }
+
+  return FutureBuilder<List<ChildRecommendations>>(
+    future: () async {
+      final userDataService = context.read<UserDataService>();
+      final recommendationService = RecommendationService(userDataService);
+      final productRepo = DynamicProductRepository();
+      final allProducts = await productRepo.getProducts();
+      final allVaccines = allProducts.whereType<Vaccine>().toList();
+      final allPrograms = allProducts.whereType<VaccinationProgram>().toList();
+
+      return await recommendationService.getRecommendationsForAllChildren(
+        normalUser.id,
+        allVaccines,
+        allPrograms,
+      );
+    }(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const SizedBox.shrink(); // Don't show loading, just skip
+      }
+
+      if (snapshot.hasError || !snapshot.hasData) {
+        return const SizedBox.shrink();
+      }
+
+      final recommendations =
+          snapshot.data!.where((rec) => rec.hasRecommendations).toList();
+
+      if (recommendations.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: recommendations.map((rec) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Productos que podrían ser útiles para ${rec.child.name}',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${rec.child.ageString} • Basado en edad e historial médico',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 15),
+              // Show recommended programs first
+              if (rec.recommendedPrograms.isNotEmpty) ...[
+                ...rec.recommendedPrograms.take(2).map((program) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 15),
+                    child: PackageCard(program: program),
+                  );
+                }).toList(),
+              ],
+              // Then show recommended vaccines
+              if (rec.recommendedVaccines.isNotEmpty) ...[
+                ...rec.recommendedVaccines.take(3).map((vaccine) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 15),
+                    child: DetailedProductCard(product: vaccine),
+                  );
+                }).toList(),
+              ],
+              const SizedBox(height: 30),
+            ],
+          );
+        }).toList(),
+      );
+    },
   );
 }
 

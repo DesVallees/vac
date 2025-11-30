@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vaq/screens/onboarding/medical_history_flow.dart';
 
 class MedicalHistoryPromptScreen extends StatelessWidget {
   final VoidCallback onComplete;
@@ -198,7 +199,16 @@ class MedicalHistoryPromptScreen extends StatelessWidget {
             // Skip to medical history button
             Center(
               child: TextButton.icon(
-                onPressed: onComplete,
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => MedicalHistoryFlow(
+                        onComplete: onComplete,
+                        onSkip: onComplete,
+                      ),
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.medical_information),
                 label: const Text('Completar historial médico ahora'),
                 style: TextButton.styleFrom(

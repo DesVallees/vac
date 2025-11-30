@@ -9,7 +9,9 @@ import 'package:vaq/screens/auth/login.dart'; // Login Screen
 import 'package:vaq/screens/landing/introduction.dart'; // Introduction Screen
 
 class AuthWrapper extends StatefulWidget {
-  const AuthWrapper({super.key});
+  final Widget? child;
+  
+  const AuthWrapper({super.key, this.child});
 
   @override
   State<AuthWrapper> createState() => _AuthWrapperState();
@@ -68,6 +70,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    // --- Use the User? object provided by StreamProvider ---
+    final currentUser = context.watch<User?>();
+
+    // If user is authenticated, pass through to child (which will handle onboarding)
+    if (currentUser != null) {
+      return widget.child ?? const MyHomePage();
+    }
+
+    // User is unauthenticated - handle intro and login flow
     // Show loading indicator while checking SharedPreferences
     if (_isLoadingIntroState) {
       return const Scaffold(
@@ -75,20 +86,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
       );
     }
 
-    // If intro needs to be shown, show it regardless of auth state
+    // If intro needs to be shown for unauthenticated users, show it
     if (_showIntro) {
       // Pass the callback to mark intro as shown when the user finishes it
       return Introduction(onDone: _markIntroAsShown);
     }
 
-    // --- Use the User? object provided by StreamProvider ---
-    final currentUser = context.watch<User?>();
-
-    // If intro is already shown, show appropriate screen
-    if (currentUser == null) {
-      return const LoginScreen();
-    } else {
-      return const MyHomePage();
-    }
+    // Intro already shown, show login screen
+    return const LoginScreen();
   }
 }

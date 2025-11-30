@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import '../assets/data_classes/appointment.dart';
+import '../assets/data_classes/appointment_slot.dart';
 
 class DynamicAppointmentRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -66,7 +67,8 @@ class DynamicAppointmentRepository {
     }
   }
 
-  /// Create a new appointment
+  /// Create a new appointment and its corresponding public slot
+  /// Both documents are created atomically using a batch write
   Future<void> createAppointment(Appointment appointment) async {
     try {
       final appointmentToSave = appointment.id.isEmpty
@@ -89,13 +91,20 @@ class DynamicAppointmentRepository {
               createdAt: appointment.createdAt,
               createdByUserId: appointment.createdByUserId,
               lastUpdatedAt: appointment.lastUpdatedAt,
+              paymentStatus: appointment.paymentStatus,
+              paymentRef: appointment.paymentRef,
             )
           : appointment;
 
-      await _firestore
+      // Create batch to write both documents atomically
+      final batch = _firestore.batch();
+
+      // Create private appointment document
+      final appointmentRef = _firestore
           .collection('appointments')
-          .doc(appointmentToSave.id)
-          .set({
+          .doc(appointmentToSave.id);
+      
+      batch.set(appointmentRef, {
         'id': appointmentToSave.id,
         'patientId': appointmentToSave.patientId,
         'patientName': appointmentToSave.patientName,
@@ -120,17 +129,50 @@ class DynamicAppointmentRepository {
         'paymentRef': appointmentToSave.paymentRef,
       });
 
-      print('✅ Appointment created: ${appointmentToSave.id}');
+      // Create public slot document only if appointment is scheduled
+      // This allows availability checking without exposing patient data
+      if (appointmentToSave.status == AppointmentStatus.scheduled) {
+        final slot = AppointmentSlot.fromAppointment(appointmentToSave);
+        final slotRef = _firestore
+            .collection('appointment_slots')
+            .doc(appointmentToSave.id);
+        
+        batch.set(slotRef, slot.toFirestore());
+      }
+
+      // Commit batch (both writes succeed or both fail)
+      await batch.commit();
+
+      print('✅ Appointment and slot created: ${appointmentToSave.id}');
     } catch (e) {
       print('❌ Error creating appointment: $e');
       throw Exception('Failed to create appointment: $e');
     }
   }
 
-  /// Update an existing appointment
+  /// Update an existing appointment and sync its public slot
+  /// If status changes away from scheduled, the slot is deleted
+  /// If status changes to scheduled, the slot is created/updated
+  /// If dateTime, duration, or locationId change, the slot is updated
   Future<void> updateAppointment(Appointment appointment) async {
     try {
-      await _firestore.collection('appointments').doc(appointment.id).update({
+      // Get the previous appointment to check what changed
+      final previousDoc = await _firestore
+          .collection('appointments')
+          .doc(appointment.id)
+          .get();
+      
+      final previousStatus = previousDoc.exists
+          ? (previousDoc.data()?['status'] as String? ?? '')
+          : null;
+
+      // Create batch to update both documents atomically
+      final batch = _firestore.batch();
+
+      // Update private appointment document
+      final appointmentRef = _firestore.collection('appointments').doc(appointment.id);
+      
+      batch.update(appointmentRef, {
         'patientName': appointment.patientName,
         'doctorName': appointment.doctorName,
         'doctorSpecialty': appointment.doctorSpecialty,
@@ -146,18 +188,49 @@ class DynamicAppointmentRepository {
         'notes': appointment.notes,
       });
 
-      print('✅ Appointment updated: ${appointment.id}');
+      // Handle slot based on status
+      final slotRef = _firestore.collection('appointment_slots').doc(appointment.id);
+      
+      if (appointment.status == AppointmentStatus.scheduled) {
+        // Appointment is scheduled - create or update the slot
+        final slot = AppointmentSlot.fromAppointment(appointment);
+        batch.set(slotRef, slot.toFirestore());
+      } else {
+        // Appointment is no longer scheduled - delete the slot if it exists
+        if (previousStatus == AppointmentStatus.scheduled.toString()) {
+          batch.delete(slotRef);
+        }
+      }
+
+      // Commit batch
+      await batch.commit();
+
+      print('✅ Appointment and slot updated: ${appointment.id}');
     } catch (e) {
       print('❌ Error updating appointment: $e');
       throw Exception('Failed to update appointment: $e');
     }
   }
 
-  /// Delete an appointment
+  /// Delete an appointment and its corresponding public slot
+  /// Both documents are deleted atomically using a batch write
   Future<void> deleteAppointment(String appointmentId) async {
     try {
-      await _firestore.collection('appointments').doc(appointmentId).delete();
-      print('✅ Appointment deleted: $appointmentId');
+      // Create batch to delete both documents atomically
+      final batch = _firestore.batch();
+
+      // Delete private appointment document
+      final appointmentRef = _firestore.collection('appointments').doc(appointmentId);
+      batch.delete(appointmentRef);
+
+      // Delete public slot document if it exists
+      final slotRef = _firestore.collection('appointment_slots').doc(appointmentId);
+      batch.delete(slotRef);
+
+      // Commit batch
+      await batch.commit();
+
+      print('✅ Appointment and slot deleted: $appointmentId');
     } catch (e) {
       print('❌ Error deleting appointment: $e');
       throw Exception('Failed to delete appointment: $e');
@@ -234,6 +307,87 @@ class DynamicAppointmentRepository {
     } catch (e) {
       print('Error fetching past appointments: $e');
       return [];
+    }
+  }
+
+  /// Get booked appointment slots for a specific location on a specific date
+  /// Uses the public appointment_slots collection for availability checking
+  Future<List<AppointmentSlot>> getBookedAppointmentsForLocationAndDate(
+    String locationId,
+    DateTime date,
+  ) async {
+    try {
+      // Get start and end of the day
+      final startOfDay = DateTime(date.year, date.month, date.day, 0, 0, 0);
+      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+      final snapshot = await _firestore
+          .collection('appointment_slots')
+          .where('locationId', isEqualTo: locationId)
+          .where('dateTime',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('dateTime', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .where('status', isEqualTo: AppointmentStatus.scheduled.toString())
+          .get();
+
+      return snapshot.docs
+          .map((doc) => AppointmentSlot.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      print('Error fetching booked appointment slots for location and date: $e');
+      return [];
+    }
+  }
+
+  /// Check if a time slot conflicts with existing appointment slots at a location
+  /// Uses the public appointment_slots collection for availability checking
+  /// Returns true if slot is available (no conflict), false otherwise
+  Future<bool> isTimeSlotAvailable(
+    String locationId,
+    DateTime proposedStartTime,
+    Duration proposedDuration,
+  ) async {
+    try {
+      final proposedEndTime = proposedStartTime.add(proposedDuration);
+      final startOfDay = DateTime(proposedStartTime.year,
+          proposedStartTime.month, proposedStartTime.day, 0, 0, 0);
+      final endOfDay = DateTime(proposedStartTime.year, proposedStartTime.month,
+          proposedStartTime.day, 23, 59, 59);
+
+      // Fetch all appointment slots for this location on this day
+      // Using the public collection that anyone can read
+      final snapshot = await _firestore
+          .collection('appointment_slots')
+          .where('locationId', isEqualTo: locationId)
+          .where('dateTime',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('dateTime', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .where('status', isEqualTo: AppointmentStatus.scheduled.toString())
+          .get();
+
+      final existingSlots = snapshot.docs
+          .map((doc) => AppointmentSlot.fromFirestore(doc))
+          .toList();
+
+      // Check for time overlaps
+      for (final slot in existingSlots) {
+        final existingStart = slot.dateTime;
+        final existingEnd = slot.endTime;
+
+        // Check if there's any overlap between the proposed time and existing slot
+        // Overlap occurs if:
+        // - proposedStartTime < existingEnd AND proposedEndTime > existingStart
+        if (proposedStartTime.isBefore(existingEnd) &&
+            proposedEndTime.isAfter(existingStart)) {
+          return false; // Conflict found
+        }
+      }
+
+      return true; // No conflicts found
+    } catch (e) {
+      print('Error checking time slot availability: $e');
+      // On error, assume slot is not available to be safe
+      return false;
     }
   }
 }

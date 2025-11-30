@@ -1,0 +1,205 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { return isSignedIn() && request.auth.token.admin == true; }
+
+    // --- Publicly readable content; only admins can write ---
+    match /products/{document=**} { allow read: if true; allow write: if isAdmin(); }
+    match /articles/{document=**} { allow read: if true; allow write: if isAdmin(); }
+    match /locations/{document=**} { allow read: if true; allow write: if isAdmin(); }
+    match /pediatricians/{document=**} { allow read: if true; allow write: if isAdmin(); }
+
+    // --- Users ---
+    // Users can read their own profile; admins can read any.
+    // Prevent regular users from setting isAdmin=true in their profile document.
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+
+      // Admins can create any user doc; regular users can only create their own and not set isAdmin true
+      allow create: if isAdmin() || (
+        isSignedIn() &&
+        request.auth.uid == userId &&
+        (request.resource.data.isAdmin == null || request.resource.data.isAdmin == false)
+      );
+
+      // Update own doc; cannot elevate to admin unless caller is admin
+      allow update: if isSignedIn() && (
+        (request.auth.uid == userId &&
+         (resource.data.isAdmin == true || request.resource.data.isAdmin != true)) ||
+        isAdmin()
+      );
+
+      // Delete only by admin
+      allow delete: if isAdmin();
+    }
+
+    // --- Children ---
+    match /children/{childId} {
+      // Helper: is the caller the parent of this child?
+      function isParent() {
+        return isSignedIn() && (
+          request.auth.uid == resource.data.parentId ||
+          (request.resource.data.parentId != null && request.auth.uid == request.resource.data.parentId)
+        );
+      }
+
+      // READ: parent can read their own children, admins can read any
+      allow read: if isSignedIn() && (isParent() || isAdmin());
+
+      // CREATE: parent can create children with themselves as parentId, admins can create any
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        (request.resource.data.parentId == request.auth.uid)
+      );
+
+      // UPDATE: parent can update their own children, admins can update any
+      // Parent cannot change the parentId
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (
+          request.auth.uid == resource.data.parentId &&
+          (request.resource.data.parentId == null || request.resource.data.parentId == resource.data.parentId)
+        )
+      );
+
+      // DELETE: parent can delete their own children, admins can delete any
+      allow delete: if isSignedIn() && (request.auth.uid == resource.data.parentId || isAdmin());
+    }
+
+    // --- Appointments ---
+    match /appointments/{appointmentId} {
+      // Helper: is the caller a participant in the *existing* appointment?
+      function isParticipant() {
+        return isSignedIn() && (
+          request.auth.uid == resource.data.patientId ||
+          request.auth.uid == resource.data.doctorId ||
+          (resource.data.participants != null && request.auth.uid in resource.data.participants)
+        );
+      }
+
+      // Helper: did the caller declare themselves as creator on write?
+      function isCreator() {
+        return isSignedIn() && request.auth.uid == request.resource.data.createdByUserId;
+      }
+
+      // READ: patient, doctor, participant via array, or admin only
+      // Availability checking uses the appointment_slots collection instead
+      allow read: if isSignedIn() && (isParticipant() || isAdmin());
+
+      // CREATE: must be signed in, be the creator, and be part of the appointment
+      // Initial status must be scheduled. Admins may create on behalf of anyone.
+      allow create: if isSignedIn() &&
+                    (
+                      isAdmin() || (
+                        isCreator() && (
+                          request.resource.data.patientId == request.auth.uid ||
+                          request.resource.data.doctorId == request.auth.uid ||
+                          (request.resource.data.participants != null && request.auth.uid in request.resource.data.participants)
+                        )
+                      )
+                    ) &&
+                    request.resource.data.status == 'AppointmentStatus.scheduled';
+
+      // UPDATE: Admin can update anything. Otherwise:
+      //  - Patient can only cancel (status -> cancelledByUser)
+      //  - Doctor can only complete (status -> completed) and add notes
+      //  - Non-admins cannot change immutable fields (patientId, doctorId, createdByUserId, dateTime)
+      allow update: if isSignedIn() && (
+                      isAdmin() ||
+                      (
+                        request.auth.uid == resource.data.patientId &&
+                        request.resource.data.status == 'AppointmentStatus.cancelledByUser' &&
+                        request.resource.data.keys().hasOnly(['status', 'lastUpdatedAt'])
+                      ) ||
+                      (
+                        request.auth.uid == resource.data.doctorId &&
+                        request.resource.data.status == 'AppointmentStatus.completed' &&
+                        request.resource.data.keys().hasOnly(['status', 'notes', 'lastUpdatedAt'])
+                      )
+                    ) && (
+                      isAdmin() || (
+                        request.resource.data.patientId == resource.data.patientId &&
+                        request.resource.data.doctorId == resource.data.doctorId &&
+                        request.resource.data.createdByUserId == resource.data.createdByUserId &&
+                        request.resource.data.dateTime == resource.data.dateTime
+                      )
+                    );
+
+      // DELETE: only admins
+      allow delete: if isAdmin();
+    }
+
+    // --- Appointment Slots (Public shadow documents for availability checking) ---
+    match /appointment_slots/{slotId} {
+      // Helper: can the caller write the corresponding appointment?
+      // Checks if appointment exists and user has permission
+      function canWriteAppointment() {
+        return exists(/databases/$(database)/documents/appointments/$(slotId)) && (
+          isAdmin() ||
+          (isSignedIn() && (
+            request.auth.uid == get(/databases/$(database)/documents/appointments/$(slotId)).data.patientId ||
+            request.auth.uid == get(/databases/$(database)/documents/appointments/$(slotId)).data.doctorId ||
+            request.auth.uid == get(/databases/$(database)/documents/appointments/$(slotId)).data.createdByUserId ||
+            (get(/databases/$(database)/documents/appointments/$(slotId)).data.participants != null &&
+             request.auth.uid in get(/databases/$(database)/documents/appointments/$(slotId)).data.participants)
+          ))
+        );
+      }
+
+      // READ: Anyone signed in can read slots for availability checking
+      // This collection only contains locationId, dateTime, duration, and status
+      // No patient data is exposed
+      allow read: if isSignedIn();
+
+      // CREATE: Allow authenticated users to create slots with safe data
+      // Slots are created alongside appointments in batch writes
+      // The appointment creation rules will validate user permissions
+      // We only need to ensure the slot contains safe data (no patient info)
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        // Ensure slot only contains safe public fields
+        (request.resource.data.keys().hasOnly([
+          'appointmentId', 'locationId', 'dateTime', 'durationMinutes', 'status'
+        ]) && 
+         request.resource.data.status == 'AppointmentStatus.scheduled' &&
+         request.resource.data.appointmentId == slotId) // Slot ID must match appointment ID
+      );
+
+      // UPDATE: Only admins or users who can update the corresponding appointment
+      // Slots are updated when appointments are updated
+      allow update: if isSignedIn() && (isAdmin() || canWriteAppointment());
+
+      // DELETE: Only admins or users who can delete the corresponding appointment
+      // Slots are deleted when appointments are deleted or status changes away from scheduled
+      allow delete: if isSignedIn() && (isAdmin() || canWriteAppointment());
+    }
+
+    // --- Medical history ---
+    match /medical_history/{userId} {
+      // Helper: is the caller the owner (user themselves) or admin?
+      function isOwner() {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Helper: is the userId a child of the caller?
+      // We need to check if a child document exists with this ID and the caller as parent
+      function isChildOfCaller() {
+        return isSignedIn() && exists(/databases/$(database)/documents/children/$(userId)) &&
+               get(/databases/$(database)/documents/children/$(userId)).data.parentId == request.auth.uid;
+      }
+
+      // READ: user can read their own medical history, parent can read their children's, admin can read any
+      allow read: if isSignedIn() && (isOwner() || isChildOfCaller() || isAdmin());
+
+      // WRITE: user can write their own medical history, parent can write their children's, admin can write any
+      allow write: if isSignedIn() && (isOwner() || isChildOfCaller() || isAdmin());
+    }
+
+    // Default deny
+    match /{document=**} { allow read, write: if false; }
+  }
+}
+

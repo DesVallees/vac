@@ -81,8 +81,10 @@ class MyApp extends StatelessWidget {
         ],
         locale: const Locale('es', 'ES'),
 
-        home: OnboardingWrapper(
-          child: const AuthWrapper(),
+        home: AuthWrapper(
+          child: OnboardingWrapper(
+            child: const MyHomePage(),
+          ),
         ),
       ),
     );

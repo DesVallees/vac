@@ -1,11 +1,15 @@
 // lib/screens/store/store.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:vaq/assets/components/detailed_product_card.dart';
 import 'package:vaq/assets/components/package_card.dart';
 import 'package:vaq/assets/components/search_and_filter_bar.dart';
 import 'package:vaq/assets/data_classes/filter_options.dart';
 import 'package:vaq/assets/data_classes/product.dart';
+import 'package:vaq/assets/data_classes/user.dart';
 import 'package:vaq/services/dynamic_product_repository.dart';
+import 'package:vaq/services/recommendation_service.dart';
+import 'package:vaq/services/user_data.dart';
 
 class Store extends StatefulWidget {
   const Store({super.key});
@@ -26,12 +30,16 @@ class _StoreState extends State<Store> {
   List<Vaccine> _filteredVaccines = [];
   List<VaccinationProgram> _filteredPrograms = [];
 
+  // personalized recommendations
+  List<ChildRecommendations> _childRecommendations = [];
+
   // search & filter state
   String _searchTerm = '';
   late Map<String, dynamic> _activeFilters;
 
   // loading state
   bool _isLoading = true;
+  bool _isLoadingRecommendations = false;
 
   // filter configuration for the SearchAndFilterBar
   final List<FilterOption> _storeFilters = [
@@ -80,12 +88,59 @@ class _StoreState extends State<Store> {
       _allPrograms = products.whereType<VaccinationProgram>().toList();
 
       _applyFilters();
+      _loadPersonalizedRecommendations();
     } catch (e) {
       print('Error loading store data: $e');
     } finally {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadPersonalizedRecommendations() async {
+    final currentUser = context.read<User?>();
+    
+    // Only load recommendations for NormalUser with children
+    if (currentUser == null || currentUser is! NormalUser) {
+      return;
+    }
+
+    final normalUser = currentUser as NormalUser;
+    if (normalUser.patientProfileIds.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingRecommendations = true;
+    });
+
+    try {
+      final userDataService = context.read<UserDataService>();
+      final recommendationService = RecommendationService(userDataService);
+
+      final recommendations =
+          await recommendationService.getRecommendationsForAllChildren(
+        normalUser.id,
+        _allVaccines,
+        _allPrograms,
+      );
+
+      if (mounted) {
+        setState(() {
+          _childRecommendations = recommendations
+              .where((rec) => rec.hasRecommendations)
+              .toList();
+          _isLoadingRecommendations = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading personalized recommendations: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingRecommendations = false;
+        });
+      }
     }
   }
 
@@ -195,6 +250,105 @@ class _StoreState extends State<Store> {
     );
   }
 
+  List<Widget> _buildPersonalizedSections(BuildContext context) {
+    final theme = Theme.of(context);
+    final sections = <Widget>[];
+
+    for (final rec in _childRecommendations) {
+      sections.add(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(bottom: 16, top: 8),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.favorite,
+                    color: theme.colorScheme.primary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Recomendado para ${rec.child.name}',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        Text(
+                          '${rec.child.ageString} • Basado en edad, alergias y vacunas previas',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Recommended Programs for this child
+            if (rec.recommendedPrograms.isNotEmpty) ...[
+              _buildSectionHeader(
+                theme,
+                'Programas Recomendados',
+                'Paquetes ideales para ${rec.child.name}',
+                Icons.vaccines,
+              ),
+              ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: rec.recommendedPrograms.length,
+                itemBuilder: (_, i) =>
+                    PackageCard(program: rec.recommendedPrograms[i]),
+                separatorBuilder: (_, __) => const SizedBox(height: 15),
+              ),
+              const SizedBox(height: 30),
+            ],
+            // Recommended Vaccines for this child
+            if (rec.recommendedVaccines.isNotEmpty) ...[
+              _buildSectionHeader(
+                theme,
+                'Vacunas Recomendadas',
+                'Vacunas apropiadas para ${rec.child.name}',
+                Icons.medication,
+              ),
+              ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: rec.recommendedVaccines.length,
+                itemBuilder: (_, i) =>
+                    DetailedProductCard(product: rec.recommendedVaccines[i]),
+                separatorBuilder: (_, __) => const SizedBox(height: 15),
+              ),
+              const SizedBox(height: 30),
+            ],
+            const Divider(height: 40),
+            const SizedBox(height: 10),
+          ],
+        ),
+      );
+    }
+
+    return sections;
+  }
+
   // ───────────────────────────────────────────────────── UI ────────────────────
   @override
   Widget build(BuildContext context) {
@@ -281,11 +435,17 @@ class _StoreState extends State<Store> {
               ),
               const SizedBox(height: 24),
 
+              // ────────── Personalized recommendations sections ──────────
+              if (!_isLoadingRecommendations && _childRecommendations.isNotEmpty)
+                ..._buildPersonalizedSections(context),
+
               // ────────── programs section ──────────
               _buildSectionHeader(
                 Theme.of(context),
                 'Programas de Vacunación',
-                'Paquetes completos de vacunación',
+                _childRecommendations.isNotEmpty
+                    ? 'Todos los programas disponibles'
+                    : 'Paquetes completos de vacunación',
                 Icons.vaccines,
               ),
               _filteredPrograms.isEmpty
@@ -319,7 +479,9 @@ class _StoreState extends State<Store> {
               _buildSectionHeader(
                 Theme.of(context),
                 'Vacunas Individuales',
-                'Vacunas específicas por edad',
+                _childRecommendations.isNotEmpty
+                    ? 'Todas las vacunas disponibles'
+                    : 'Vacunas específicas por edad',
                 Icons.medication,
               ),
               _filteredVaccines.isEmpty
