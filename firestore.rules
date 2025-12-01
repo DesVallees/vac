@@ -198,6 +198,23 @@ service cloud.firestore {
       allow write: if isSignedIn() && (isOwner() || isChildOfCaller() || isAdmin());
     }
 
+    // --- User Carts ---
+    match /user_carts/{userId} {
+      // Helper: is the caller the cart owner?
+      function isCartOwner() {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Users can read and write their own cart; admins can read/write any
+      allow read, write: if isSignedIn() && (isCartOwner() || isAdmin());
+
+      // Cart items subcollection
+      match /items/{cartItemId} {
+        // Users can read and write items in their own cart; admins can read/write any
+        allow read, write: if isSignedIn() && (isCartOwner() || isAdmin());
+      }
+    }
+
     // Default deny
     match /{document=**} { allow read, write: if false; }
   }

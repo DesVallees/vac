@@ -6,6 +6,9 @@ import 'package:vaq/services/image_service.dart';
 /// Card widget used to display a [VaccinationProgram] (i.e. a package) in the
 /// Store screen. Very similar to [DetailedProductCard] but tweaked for the
 /// copy & meta‑data that packages need.
+///
+/// Note: VaccinationProgram products cannot be added to cart - only their
+/// individual DoseBundle components can be added.
 class PackageCard extends StatelessWidget {
   final VaccinationProgram program;
 

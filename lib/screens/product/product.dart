@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:vaq/assets/data_classes/product.dart';
 import 'package:vaq/screens/new_appointment/new_appointment.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
 import 'package:vaq/services/dynamic_product_repository.dart';
 import 'package:vaq/assets/components/detailed_product_card.dart';
 import 'package:vaq/services/image_service.dart';
+import 'package:vaq/providers/cart_provider.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final Product product;
@@ -144,33 +146,116 @@ class ProductDetailPage extends StatelessWidget {
                           // --- Alternative Prices Section (Conditional) ---
                           _buildAlternativePricesSection(context),
 
-                          const SizedBox(height: 30), // Space before button
+                          const SizedBox(height: 30), // Space before buttons
 
-                          // --- Action Button ---
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      ScheduleAppointmentScreen(
-                                          product: product),
+                          // --- Action Buttons ---
+                          if (product is VaccinationProgram)
+                            // VaccinationProgram can't be added to cart
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ScheduleAppointmentScreen(
+                                            product: product),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.colorScheme.primary,
+                                foregroundColor: theme.colorScheme.onPrimary,
+                                padding: const EdgeInsets.symmetric(vertical: 15),
+                                textStyle: const TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: theme.colorScheme.primary,
-                              foregroundColor: theme.colorScheme.onPrimary,
-                              padding: const EdgeInsets.symmetric(vertical: 15),
-                              textStyle: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                minimumSize: const Size(double.infinity, 50),
                               ),
-                              minimumSize: const Size(double.infinity, 50),
+                              child: const Text('Agendar Cita'),
+                            )
+                          else
+                            // Other products can be added to cart
+                            Column(
+                              children: [
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ScheduleAppointmentScreen(
+                                                product: product),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: theme.colorScheme.primary,
+                                    foregroundColor: theme.colorScheme.onPrimary,
+                                    padding: const EdgeInsets.symmetric(vertical: 15),
+                                    textStyle: const TextStyle(
+                                        fontSize: 18, fontWeight: FontWeight.bold),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    minimumSize: const Size(double.infinity, 50),
+                                  ),
+                                  child: const Text('Agendar Cita'),
+                                ),
+                                const SizedBox(height: 12),
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    try {
+                                      context.read<CartProvider>().addToCart(product);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: const Text('Producto agregado al carrito'),
+                                          backgroundColor: theme.colorScheme.secondary,
+                                          duration: const Duration(seconds: 2),
+                                          behavior: SnackBarBehavior.floating,
+                                          margin: const EdgeInsets.only(
+                                            bottom: 20,
+                                            left: 16,
+                                            right: 16,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(e.toString()),
+                                          backgroundColor: theme.colorScheme.error,
+                                          behavior: SnackBarBehavior.floating,
+                                          margin: const EdgeInsets.only(
+                                            bottom: 20,
+                                            left: 16,
+                                            right: 16,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(Icons.add_shopping_cart),
+                                  label: const Text('Agregar al Carrito'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 15),
+                                    textStyle: const TextStyle(
+                                        fontSize: 18, fontWeight: FontWeight.bold),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    minimumSize: const Size(double.infinity, 50),
+                                  ),
+                                ),
+                              ],
                             ),
-                            child: const Text('Agendar Cita'),
-                          ),
 
                           const SizedBox(height: 40), // Bottom padding
                         ],
@@ -231,32 +316,6 @@ class ProductDetailPage extends StatelessWidget {
         ),
 
         const SizedBox(height: 20),
-
-        // Quick appointment button for bundles
-        if (product is DoseBundle)
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      ScheduleAppointmentScreen(product: product),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: theme.colorScheme.onPrimary,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              textStyle:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              minimumSize: const Size(double.infinity, 46),
-            ),
-            child: const Text('Agendar Cita'),
-          ),
       ],
     );
   }

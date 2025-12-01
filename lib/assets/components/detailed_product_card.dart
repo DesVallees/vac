@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:vaq/assets/data_classes/product.dart';
 import 'package:vaq/screens/product/product.dart';
 import 'package:vaq/services/image_service.dart';
+import 'package:vaq/providers/cart_provider.dart';
 
 class DetailedProductCard extends StatelessWidget {
   final Product product;
@@ -80,14 +82,65 @@ class DetailedProductCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 12), // Add space before price
-                  Text(
-                    product.price != null
-                        ? '\$${product.price!.toStringAsFixed(2)}'
-                        : 'Precio no disponible',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        product.price != null
+                            ? '\$${product.price!.toStringAsFixed(2)}'
+                            : 'Precio no disponible',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      if (product is! VaccinationProgram)
+                        IconButton(
+                          icon: Icon(
+                            Icons.add_shopping_cart,
+                            color: theme.colorScheme.primary,
+                          ),
+                          onPressed: () {
+                            try {
+                              context.read<CartProvider>().addToCart(product);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Producto agregado al carrito'),
+                                  backgroundColor: theme.colorScheme.secondary,
+                                  duration: const Duration(seconds: 2),
+                                  behavior: SnackBarBehavior.floating,
+                                  margin: const EdgeInsets.only(
+                                    bottom: 90, // Space above bottom navigation bar
+                                    left: 16,
+                                    right: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(e.toString()),
+                                  backgroundColor: theme.colorScheme.error,
+                                  behavior: SnackBarBehavior.floating,
+                                  margin: const EdgeInsets.only(
+                                    bottom: 90,
+                                    left: 16,
+                                    right: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          tooltip: 'Agregar al carrito',
+                        ),
+                    ],
                   ),
                 ],
               ),

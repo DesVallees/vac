@@ -100,7 +100,7 @@ class _StoreState extends State<Store> {
 
   Future<void> _loadPersonalizedRecommendations() async {
     final currentUser = context.read<User?>();
-    
+
     // Only load recommendations for NormalUser with children
     if (currentUser == null || currentUser is! NormalUser) {
       return;
@@ -128,9 +128,8 @@ class _StoreState extends State<Store> {
 
       if (mounted) {
         setState(() {
-          _childRecommendations = recommendations
-              .where((rec) => rec.hasRecommendations)
-              .toList();
+          _childRecommendations =
+              recommendations.where((rec) => rec.hasRecommendations).toList();
           _isLoadingRecommendations = false;
         });
       }
@@ -436,7 +435,8 @@ class _StoreState extends State<Store> {
               const SizedBox(height: 24),
 
               // ────────── Personalized recommendations sections ──────────
-              if (!_isLoadingRecommendations && _childRecommendations.isNotEmpty)
+              if (!_isLoadingRecommendations &&
+                  _childRecommendations.isNotEmpty)
                 ..._buildPersonalizedSections(context),
 
               // ────────── programs section ──────────

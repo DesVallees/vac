@@ -19,7 +19,9 @@ class Schedule extends StatefulWidget {
 
 class _ScheduleState extends State<Schedule> {
   // State variables
-  late final List<Appointment> _allAppointments;
+  List<Appointment> _allAppointments = [];
+  List<Appointment> _filteredAppointments = [];
+  bool _isLoading = true;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   Map<DateTime, List<Appointment>> _events = {};
@@ -33,6 +35,9 @@ class _ScheduleState extends State<Schedule> {
 
   Future<void> _loadAppointments() async {
     try {
+      setState(() {
+        _isLoading = true;
+      });
       // 1. Load all appointments
       _allAppointments = await _fetchAppointments();
 
@@ -41,8 +46,15 @@ class _ScheduleState extends State<Schedule> {
 
       // 3. Apply initial filter based on the initially selected day
       _filterAppointmentsForSelectedDay();
+
+      setState(() {
+        _isLoading = false;
+      });
     } catch (e) {
       print('Error loading appointments: $e');
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -66,28 +78,25 @@ class _ScheduleState extends State<Schedule> {
   // Filter the appointments list based on the _selectedDay
   void _filterAppointmentsForSelectedDay() {
     if (_selectedDay == null) {
-      // If no day is selected, maybe show all upcoming? Or none?
-      // Let's show appointments on or after today if nothing is selected.
+      // If no day is selected, show appointments on or after today
       final today = DateTime.now();
       final startOfToday = DateTime(today.year, today.month, today.day);
-      setState(() {
-        _allAppointments
-            .where((appt) => !appt.dateTime
-                .isBefore(startOfToday)) // On or after start of today
-            .toList()
-          ..sort((a, b) => a.dateTime.compareTo(b.dateTime)); // Sort them
-      });
+      _filteredAppointments = _allAppointments.where((appt) {
+        final appointmentDate = DateTime(
+            appt.dateTime.year, appt.dateTime.month, appt.dateTime.day);
+        return !appointmentDate.isBefore(startOfToday);
+      }).toList()
+        ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
     } else {
       // Filter for appointments on or after the START of the selected day
       final startOfSelectedDay =
           DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
-      setState(() {
-        _allAppointments
-            .where((appt) => !appt.dateTime.isBefore(
-                startOfSelectedDay)) // On or after start of selected day
-            .toList()
-          ..sort((a, b) => a.dateTime.compareTo(b.dateTime)); // Sort them
-      });
+      _filteredAppointments = _allAppointments.where((appt) {
+        final appointmentDate = DateTime(
+            appt.dateTime.year, appt.dateTime.month, appt.dateTime.day);
+        return !appointmentDate.isBefore(startOfSelectedDay);
+      }).toList()
+        ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
     }
   }
 
@@ -97,8 +106,8 @@ class _ScheduleState extends State<Schedule> {
       setState(() {
         _selectedDay = selectedDay;
         _focusedDay = focusedDay; // Update focused day as well
+        _filterAppointmentsForSelectedDay(); // Re-filter the list
       });
-      _filterAppointmentsForSelectedDay(); // Re-filter the list
     }
   }
 
@@ -168,32 +177,22 @@ class _ScheduleState extends State<Schedule> {
             const SizedBox(height: 15),
 
             // --- Dynamic List of Appointments ---
-            FutureBuilder<List<Appointment>>(
-              future: _fetchAppointments(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return const Center(child: Text('Error al cargar las citas'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('Ninguna cita programada.'));
-                }
-
-                final appointments = snapshot.data!;
-                return ListView.separated(
-                  padding: EdgeInsets.zero,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: appointments.length,
-                  itemBuilder: (context, index) {
-                    final appointment = appointments[index];
-                    return AppointmentCard(appointment: appointment);
-                  },
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 15),
-                );
-              },
-            ),
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredAppointments.isEmpty
+                    ? const Center(child: Text('Ninguna cita programada.'))
+                    : ListView.separated(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _filteredAppointments.length,
+                        itemBuilder: (context, index) {
+                          final appointment = _filteredAppointments[index];
+                          return AppointmentCard(appointment: appointment);
+                        },
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 15),
+                      ),
 
             const SizedBox(height: 40), // Padding at the bottom
           ],

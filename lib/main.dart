@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vaq/providers/bottom_navigation_bar_provider.dart';
+import 'package:vaq/providers/cart_provider.dart';
 import 'package:vaq/screens/home/home.dart';
 import 'package:vaq/screens/schedule/schedule.dart';
 import 'package:vaq/screens/store/store.dart';
+import 'package:vaq/screens/cart/cart.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:vaq/screens/auth/auth.dart'; // Import the AuthWrapper
@@ -48,6 +50,7 @@ class MyApp extends StatelessWidget {
           initialData: null, // Initial data is null (no user logged in)
         ),
         ChangeNotifierProvider(create: (_) => BottomNavigationBarProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner:
@@ -108,10 +111,16 @@ class _MyHomePageState extends State<MyHomePage> {
     switch (selectedIndex) {
       case 0:
         page = Store();
+        break;
       case 1:
         page = Home();
+        break;
       case 2:
         page = Schedule();
+        break;
+      case 3:
+        page = Cart();
+        break;
       default:
         page = Home();
         print('Warning: Invalid selectedIndex $selectedIndex');
@@ -141,6 +150,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Padding(
             padding: const EdgeInsets.only(top: 15),
             child: BottomNavigationBar(
+              type: BottomNavigationBarType.fixed,
               items: [
                 BottomNavigationBarItem(
                   icon: Icon(Icons.shopping_bag),
@@ -153,6 +163,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 BottomNavigationBarItem(
                   icon: Icon(Icons.calendar_month),
                   label: 'Agenda',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.shopping_cart),
+                  label: 'Carrito',
                 ),
               ],
               currentIndex: selectedIndex,

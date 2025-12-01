@@ -3,7 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vaq/screens/profile/edit_profile.dart';
+import 'package:vaq/screens/settings/terms_and_conditions.dart';
+import 'package:vaq/screens/settings/privacy_policy.dart';
+import 'package:vaq/screens/settings/faq.dart';
+import 'package:vaq/screens/settings/contact.dart';
+import 'package:vaq/screens/settings/change_password.dart';
+import 'package:vaq/screens/settings/notification_preferences.dart';
 // Import User class if needed for context
 
 class SettingsScreen extends StatefulWidget {
@@ -14,9 +22,9 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Example state for a switch - replace with actual state management later
   bool _notificationsEnabled = true;
-  String _selectedTheme = 'System'; // Example state
+  bool _isLoadingNotificationState = true;
+  static const String _keyNotificationsEnabled = 'notifications_enabled';
 
   // --- Sign Out Logic (Copied from ProfileScreen) ---
   Future<void> _signOut(BuildContext context) async {
@@ -33,6 +41,193 @@ class _SettingsScreenState extends State<SettingsScreen> {
             msg: 'Error al cerrar sesión: $e',
             backgroundColor: Theme.of(context).colorScheme.error,
             textColor: Theme.of(context).colorScheme.onError);
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationState();
+  }
+
+  Future<void> _loadNotificationState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _notificationsEnabled = prefs.getBool(_keyNotificationsEnabled) ?? true;
+        _isLoadingNotificationState = false;
+      });
+    } catch (e) {
+      print('Error loading notification state: $e');
+      setState(() {
+        _isLoadingNotificationState = false;
+      });
+    }
+  }
+
+  Future<void> _saveNotificationState(bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyNotificationsEnabled, value);
+    } catch (e) {
+      print('Error saving notification state: $e');
+    }
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    final theme = Theme.of(context);
+    final status = await Permission.notification.status;
+
+    if (status.isGranted) {
+      // Permission already granted
+      return;
+    }
+
+    if (status.isDenied) {
+      // Request permission
+      final result = await Permission.notification.request();
+
+      if (result.isGranted) {
+        if (mounted) {
+          Fluttertoast.showToast(
+            msg: 'Permiso de notificaciones concedido',
+            backgroundColor: theme.colorScheme.secondary,
+            textColor: theme.colorScheme.onSecondary,
+            toastLength: Toast.LENGTH_SHORT,
+          );
+        }
+      } else if (result.isPermanentlyDenied) {
+        // Permission permanently denied, show dialog to open settings
+        if (mounted) {
+          _showPermissionDeniedDialog();
+        }
+      } else {
+        // Permission denied
+        if (mounted) {
+          setState(() {
+            _notificationsEnabled = false;
+          });
+          _saveNotificationState(false);
+          Fluttertoast.showToast(
+            msg: 'Permiso de notificaciones denegado',
+            backgroundColor: theme.colorScheme.error,
+            textColor: theme.colorScheme.onError,
+            toastLength: Toast.LENGTH_SHORT,
+          );
+        }
+      }
+    } else if (status.isPermanentlyDenied) {
+      // Permission permanently denied, show dialog to open settings
+      if (mounted) {
+        _showPermissionDeniedDialog();
+      }
+    }
+  }
+
+  void _showPermissionDeniedDialog() {
+    final theme = Theme.of(context);
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Permiso de Notificaciones'),
+          content: const Text(
+            'Para recibir notificaciones, necesitas habilitar el permiso en la configuración de tu dispositivo. ¿Quieres abrir la configuración ahora?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                setState(() {
+                  _notificationsEnabled = false;
+                });
+                _saveNotificationState(false);
+              },
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await openAppSettings();
+                // Check permission again after user returns
+                Future.delayed(const Duration(milliseconds: 500), () async {
+                  final status = await Permission.notification.status;
+                  if (mounted) {
+                    setState(() {
+                      _notificationsEnabled = status.isGranted;
+                    });
+                    _saveNotificationState(status.isGranted);
+                    if (status.isGranted) {
+                      Fluttertoast.showToast(
+                        msg: 'Permiso de notificaciones concedido',
+                        backgroundColor: theme.colorScheme.secondary,
+                        textColor: theme.colorScheme.onSecondary,
+                        toastLength: Toast.LENGTH_SHORT,
+                      );
+                    }
+                  }
+                });
+              },
+              child: const Text('Abrir Configuración'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handleNotificationToggle(bool value) async {
+    final theme = Theme.of(context);
+
+    if (value) {
+      // User wants to enable notifications
+      // Check current permission status
+      final status = await Permission.notification.status;
+
+      if (status.isGranted) {
+        // Permission already granted
+        setState(() {
+          _notificationsEnabled = true;
+        });
+        _saveNotificationState(true);
+        if (mounted) {
+          Fluttertoast.showToast(
+            msg: 'Notificaciones habilitadas',
+            backgroundColor: theme.colorScheme.secondary,
+            textColor: theme.colorScheme.onSecondary,
+            toastLength: Toast.LENGTH_SHORT,
+          );
+        }
+      } else {
+        // Need to request permission
+        setState(() {
+          _notificationsEnabled = true; // Optimistically set to true
+        });
+        await _requestNotificationPermission();
+
+        // Verify final state
+        final finalStatus = await Permission.notification.status;
+        if (mounted) {
+          setState(() {
+            _notificationsEnabled = finalStatus.isGranted;
+          });
+          _saveNotificationState(finalStatus.isGranted);
+        }
+      }
+    } else {
+      // User wants to disable notifications
+      setState(() {
+        _notificationsEnabled = false;
+      });
+      _saveNotificationState(false);
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: 'Notificaciones deshabilitadas',
+          backgroundColor: theme.colorScheme.tertiary,
+          textColor: theme.colorScheme.onTertiary,
+          toastLength: Toast.LENGTH_SHORT,
+        );
       }
     }
   }
@@ -80,9 +275,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('Cambiar Contraseña'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: Navigate to Change Password screen or show dialog
-              Fluttertoast.showToast(
-                  msg: 'Pantalla Cambiar Contraseña (Próximamente)');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ChangePasswordScreen(),
+                ),
+              );
             },
           ),
           const Divider(),
@@ -94,15 +292,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: theme.iconTheme.color),
             title: const Text('Habilitar Notificaciones'),
             value: _notificationsEnabled,
-            onChanged: (bool value) {
-              setState(() {
-                _notificationsEnabled = value;
-                // TODO: Add logic to save notification preference
-              });
-              Fluttertoast.showToast(
-                  msg:
-                      'Notificaciones ${value ? "habilitadas" : "deshabilitadas"} (Demo)');
-            },
+            onChanged: _isLoadingNotificationState
+                ? null
+                : (bool value) => _handleNotificationToggle(value),
             activeColor: theme.colorScheme.primary,
           ),
           ListTile(
@@ -110,26 +302,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: theme.iconTheme.color), // Tune icon
             title: const Text('Gestionar Preferencias'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Navigate to detailed notification settings screen
-              Fluttertoast.showToast(
-                  msg: 'Pantalla Preferencias Notificaciones (Próximamente)');
-            },
+            onTap: _notificationsEnabled
+                ? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const NotificationPreferencesScreen(),
+                      ),
+                    );
+                  }
+                : null,
             enabled: _notificationsEnabled, // Disable if notifications are off
-          ),
-          const Divider(),
-
-          // --- Appearance Section ---
-          _buildSectionHeader('Apariencia', theme),
-          ListTile(
-            leading: Icon(Icons.palette_outlined, color: theme.iconTheme.color),
-            title: const Text('Tema'),
-            subtitle: Text(_selectedTheme), // Show current selection
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Show theme selection dialog (Light/Dark/System)
-              _showThemeDialog();
-            },
           ),
           const Divider(),
 
@@ -139,19 +323,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading:
                 Icon(Icons.privacy_tip_outlined, color: theme.iconTheme.color),
             title: const Text('Política de Privacidad'),
-            trailing: const Icon(Icons.launch), // External link icon
+            trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: Replace with your actual Privacy Policy URL
-              _launchUrl('https://www.santiagoovalles.com/');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PrivacyPolicyScreen(),
+                ),
+              );
             },
           ),
           ListTile(
             leading: Icon(Icons.gavel_outlined, color: theme.iconTheme.color),
-            title: const Text('Términos de Servicio'),
-            trailing: const Icon(Icons.launch), // External link icon
+            title: const Text('Términos y Condiciones'),
+            trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: Replace with your actual Terms of Service URL
-              _launchUrl('https://www.santiagoovalles.com/');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TermsAndConditionsScreen(),
+                ),
+              );
             },
           ),
           const Divider(),
@@ -163,9 +355,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('Centro de Ayuda / FAQ'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: Navigate to Help Screen or launch URL
-              Fluttertoast.showToast(msg: 'Centro de Ayuda (Próximamente)');
-              // Or: _launchUrl('https://www.example.com/help');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FAQScreen(),
+                ),
+              );
             },
           ),
           ListTile(
@@ -174,9 +369,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('Contáctanos'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: Navigate to Contact Screen or launch mailto/tel link
-              Fluttertoast.showToast(msg: 'Contacto (Próximamente)');
-              // Or: _launchUrl('mailto:support@example.com');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ContactScreen(),
+                ),
+              );
             },
           ),
           const Divider(),
@@ -226,70 +424,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           letterSpacing: 0.8,
         ),
       ),
-    );
-  }
-
-  // --- Example Theme Selection Dialog ---
-  void _showThemeDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Seleccionar Tema'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              RadioListTile<String>(
-                title: const Text('Claro'),
-                value: 'Light',
-                groupValue: _selectedTheme,
-                onChanged: (value) {
-                  setState(() {
-                    _selectedTheme = value!;
-                    // TODO: Add logic to actually change the theme
-                  });
-                  Navigator.of(context).pop();
-                  Fluttertoast.showToast(msg: 'Tema Claro (Demo)');
-                },
-              ),
-              RadioListTile<String>(
-                title: const Text('Oscuro'),
-                value: 'Dark',
-                groupValue: _selectedTheme,
-                onChanged: (value) {
-                  setState(() {
-                    _selectedTheme = value!;
-                    // TODO: Add logic to actually change the theme
-                  });
-                  Navigator.of(context).pop();
-                  Fluttertoast.showToast(msg: 'Tema Oscuro (Demo)');
-                },
-              ),
-              RadioListTile<String>(
-                title: const Text('Sistema'),
-                value: 'System',
-                groupValue: _selectedTheme,
-                onChanged: (value) {
-                  setState(() {
-                    _selectedTheme = value!;
-                    // TODO: Add logic to actually change the theme
-                  });
-                  Navigator.of(context).pop();
-                  Fluttertoast.showToast(msg: 'Tema Sistema (Demo)');
-                },
-              ),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancelar'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 }
